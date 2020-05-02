@@ -5,7 +5,8 @@ import pdb
 from os import listdir
 from os.path import isfile, join
 
-train_dir= "/opt/datasets/MIO-TCD-Classification/train/"
+#train_dir= "/opt/datasets/MIO-TCD-Classification/train/"
+train_dir= "/data/MIO-TCD-Classification/train/"
 classes = ["background", "bus", "car", "pedestrian", "articulated_truck"] ## coded as 0,1,2,3,4
 
 NUM_CLASSES= len(classes)
@@ -14,7 +15,7 @@ IMG_HEIGHT =32
 NUM_CHANNELS=3
 NUM_TRAINING_IMAGES_IN_CLASS = 5000  ## choose 10k images per class as of now
 NUM_TRAINING_IMAGES=NUM_TRAINING_IMAGES_IN_CLASS*NUM_CLASSES
-NUM_TEST_IMAGES_IN_CLASS = 1000  
+NUM_TEST_IMAGES_IN_CLASS = 1000
 NUM_TEST_IMAGES=NUM_TEST_IMAGES_IN_CLASS*NUM_CLASSES
 
 np_features = np.zeros((NUM_TRAINING_IMAGES, NUM_CHANNELS, IMG_HEIGHT, IMG_WIDTH), np.float32)
@@ -70,4 +71,3 @@ for c in classes:
 print(ind)
 np.save('test_images.npy', np_test_features)
 np.save('test_labels.npy', np_test_labels)
-
