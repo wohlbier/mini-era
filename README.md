@@ -8,7 +8,7 @@ Mini-ERA has been successfully built and executed using the following set-up:
  - Ubuntu 18.04
  - Python 3.0
  - Python 2.7
- 
+
 Ubuntu 16.04 platforms with older Python versions may also work but have not been tested.
 
 *Note:* The CV CNN code requires clear delineation of Python 2 or Python 3, and modification of the Makefile to employ one or the other.  The rest of the python code is largely Python 2/3 agnostic.
@@ -26,7 +26,7 @@ This last step (`python mio_dataset.py`) has to be run **only once** to create t
 
 ### Build
 
-A basic Mini-ERA build is straightforward, and requires only that one execute the default make action in the ```mini-era``` directory.  
+A basic Mini-ERA build is straightforward, and requires only that one execute the default make action in the ```mini-era``` directory.
 
 ```
 make allclean
@@ -38,7 +38,7 @@ The ```make allclean``` is added just for surety that all code is re-built, i.e.
 ### Usage
 ```
 ./main.exe -h
-Usage: ./cmain.exe <OPTIONS>
+Usage: ./main.exe <OPTIONS>
  OPTIONS:
     -h         : print this helpfule usage info
     -o         : print the Visualizer output traace information during the run
@@ -59,8 +59,8 @@ Mini-ERA also supports a number of other targets.  One can build these individua
 make all
 ```
 
-The primary update is that Mini-ERA now supports two modes of execution: 
- - a trace-driven mode (the "classic" mode) where the simulation is driven by an input trace of obstacle positions per simulation time step 
+The primary update is that Mini-ERA now supports two modes of execution:
+ - a trace-driven mode (the "classic" mode) where the simulation is driven by an input trace of obstacle positions per simulation time step
  - a new, developing mode which uses on-board environment simulation to both introduce new obstacle vehicles and track the positions, etc. during simulation
 This new simulation version is developed from the trace generation utility, and provides a greater range of behaviors to the autonomous vehicle ("red car") during a Mini-ERA run.
 
@@ -70,7 +70,7 @@ The ```make all``` command should compile a number of targets:
    - vmain.exe : trace-driven Mini-ERA in "verbose" mode (includes debug output)
  - The trace-driven Mini-ERA with no use of Keras/Python code:
    - cmain.exe : the trace-driven Mini-ERA with no use of Keras/Python code
-   - vcmain.exe : the trace-driven Mini-ERA in "verbose" mode, with no use of Keras/Python code 
+   - vcmain.exe : the trace-driven Mini-ERA in "verbose" mode, with no use of Keras/Python code
  - The default, trace-driven Mini-ERA:
    - sim_main.exe : the base Mini-ERA code running in a simulation (not trace-driven) mode
    - vsim_main.exe : the simulation-mode Mini-ERA in "verbose" mode (includes debug output)
@@ -114,7 +114,7 @@ Usage: ./cmain.exe <OPTIONS>
 Trace-driven Mini-era requires the specification of the input trace (using -t <trace_file>) and also supports the specification of a message modeling behavior for the Viterbi kernel, using -v <N> (where N is an integer).  The corresponding behaviors are:
 
 ```
-./sim_main.exe 
+./sim_main.exe
 ```
 
 
@@ -138,7 +138,7 @@ Usage: ./csim_main.exe <OPTIONS>
                :      5 = One long  msg per obstacle + 1 per time step
 ```
 
-Note that in simulation mode, there is no option to specify a trace (the '-t' of trace-mode) as there is no need for or use of a trace.  There are four additional options in simulation-mode: the '-s' which indicates the number of time steps to simulate (which is analogous to the trace length) and '-r' which sets the seed value (and unsigned int) for the C ```rand()``` function used in the simulation.  Both modes support the '-v' and '-o' options.  
+Note that in simulation mode, there is no option to specify a trace (the '-t' of trace-mode) as there is no need for or use of a trace.  There are four additional options in simulation-mode: the '-s' which indicates the number of time steps to simulate (which is analogous to the trace length) and '-r' which sets the seed value (and unsigned int) for the C ```rand()``` function used in the simulation.  Both modes support the '-v' and '-o' options.
 
 In the Simulation mode there is also a `-A` option, which allows the simulation to add obstacle vehicles to all five lanes of the highway.  This is allowable in the simulation mode because the autonomous vehicle ("red car") is allowed to alter speed, etc. in order to avoid collisions, which otherwise tend to require a clear lane in the trace mode.  It is possible, however, to run simulation mode in either the default 3-lanes of obstacle traffic (leaving the left-most and right-most free of obstacles) or in a five-lane obstacles mode by specifying the '-A' for "All lanes can contain obstacle vehicles."
 
@@ -165,7 +165,7 @@ The trace is a simple ASCII file. The general format of the trace file is a 3-tu
 Xl:yl,Xm:ym,Xr:yr
 ```
 
-where `X` is a character which identifies a type of obstacle object, and `y` is an unsigned integer representing a distance measure for that object. The `Xl` would be a character identifying an object in the Left lane, at distance `yl` while the `Xm` identifies an object in the `Middle` lane at distance `ym` and the `Xr` indicates an object in the `Right` lane at distance `yr`.  
+where `X` is a character which identifies a type of obstacle object, and `y` is an unsigned integer representing a distance measure for that object. The `Xl` would be a character identifying an object in the Left lane, at distance `yl` while the `Xm` identifies an object in the `Middle` lane at distance `ym` and the `Xr` indicates an object in the `Right` lane at distance `yr`.
 
 The "world" in Mini-ERA is viewed as a 2-dimensional space of five-lane highway, where the lanes are arranged left-to-right and the distances are from position zero (which is effectively the back of the car) to some maximum value N which represents the farthest out objects can occur/be tracked.
 The lanes are labeled left-to-right as:
@@ -188,7 +188,7 @@ In this implementation, the objects include:
   N - nothing
 ```
 
-In concert, the distances currently implemented are values between 0 and 550 and represent some currently unspecified unit of distance (thoguh in truth they correspond to the radar kernel's distance measures, which span roughly zero to 500 meters, and 550 represents "infinitely far away" or "no obstale detected"). 
+In concert, the distances currently implemented are values between 0 and 550 and represent some currently unspecified unit of distance (thoguh in truth they correspond to the radar kernel's distance measures, which span roughly zero to 500 meters, and 550 represents "infinitely far away" or "no obstale detected").
 The following image illustrates how a specific scenario at a given point in time is encoded in a trace entry, assuming we are using 50-metere steps of distance (though in fact the trace currently can contain arbitrary unsigned integer values for distance; these are converted to 50-meter "buckets" (i.e. ```floor(dist/50)``` when determining the radar input).:
 
 ```
@@ -206,7 +206,7 @@ The following image illustrates how a specific scenario at a given point in time
   |   50  |      |      |      |
   |    0  |      |      |      |
 
-Corresponding trace entry:  C:300,T:400,P:100 
+Corresponding trace entry:  C:300,T:400,P:100
 ```
 
 ## Dictionary Files
@@ -239,7 +239,7 @@ The trace dictionary is defined as follows:
 For each dictionary entry:
 
 ```
-   n1 n2 n3 n4 n5 : OFDM parms: 
+   n1 n2 n3 n4 n5 : OFDM parms:
    m1 m2 m3 m4 m5 : FRAME parms:
    x1 x2 x3 ...   : The message bits (input to decode routine)
 ```
@@ -255,7 +255,7 @@ For each dictionary entry:
 ...
 0 0 0 0 0 0 1 1 ... - The input bits for the fourth message (last bit ENDs this and all dictionary entries)
 ```
- 
+
 ### The Radar Dictionary Format
 
 This file describes the Radar dictionary format, as defined in `radar_dictionary.dfn`.
@@ -278,7 +278,7 @@ The trace dictionary is defined as follows:
 This version of the Mini-ERA does not use or require a CV CNN Dictionary file.  Note that this may change as we move forward, but currently the dictionary functionality is incorporated into the Python CV CNN kernel code.
 
 
-## More Details, Additional Utilities, etc. 
+## More Details, Additional Utilities, etc.
 
 The Mini-ERA applications currently consists of four major components:
 
@@ -355,7 +355,7 @@ Each of these lines defines some aspects of the world and simulation environment
  - ```MY_CAR DECEL RATE 15.0``` : This defines the rate (delta-speed) at which the red car can brake (or slow down) to avoid collisions
  - ```MY_CAR LANE 2 SPEED 50``` : This defines the initial state of the red car; alterations should not matter much as the car will tend to move to the goal speed and center lane at all times anyway.
 
-When one runs Mini-ERA in simulation-mode, the beginning of the run will output the World Description File contents (as per the example ```default_world.desc``` above) into the output of the run (as part of the header information).  This can then be used to track which options were used to produce the simulation run. 
+When one runs Mini-ERA in simulation-mode, the beginning of the run will output the World Description File contents (as per the example ```default_world.desc``` above) into the output of the run (as part of the header information).  This can then be used to track which options were used to produce the simulation run.
 
 
 

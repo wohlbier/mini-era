@@ -1,8 +1,8 @@
 # docker build --rm --build-arg PROXY=$http_proxy --pull -t miniera .
 # on seville
-# nvidia-docker run -v /raid/user-scratch/jgwohlbier/EPOCHS/data:/data -v $(pwd):/workspace -it miniera:latest /bin/bash
+# nvidia-docker run -v /raid/user-scratch/jgwohlbier/EPOCHS/data:/data -it miniera:latest /bin/bash
 # on lambda
-# docker run --gpus all -v /raid/user-scratch/jgwohlbier/EPOCHS/data:/data -v $(pwd):/workspace -it miniera:latest /bin/bash
+# docker run --gpus all -v /raid/user-scratch/jgwohlbier/EPOCHS/data:/data -it miniera:latest /bin/bash
 # cd cv/CNN_MIO_KERAS
 # python mio_dataset.py
 # python mio_training.py
@@ -30,3 +30,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install libopencv-dev -y
 RUN python -m pip install --upgrade pip
 RUN pip install opencv-python
 RUN pip install keras
+
+COPY . /workspace/mini-era
+
+ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
+RUN cd mini-era && \
+    make allclean && \
+    make all

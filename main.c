@@ -45,7 +45,7 @@ extern uint64_t depunc_sec;
 extern uint64_t depunc_usec;
 #endif
 
-char cv_dict[256]; 
+char cv_dict[256];
 char rad_dict[256];
 char vit_dict[256];
 //char * cv_dict  = "traces/objects_dictionary.dfn";
@@ -58,8 +58,8 @@ unsigned time_step;
 void print_usage(char * pname) {
   printf("Usage: %s <OPTIONS>\n", pname);
   printf(" OPTIONS:\n");
-  printf("    -h         : print this helpfule usage info\n");
-  printf("    -o         : print the Visualizer output traace information during the run\n");
+  printf("    -h         : print this helpful usage info\n");
+  printf("    -o         : print the Visualizer output trace information during the run\n");
   printf("    -R <file>  : defines the input Radar dictionary file <file> to use\n");
   printf("    -V <file>  : defines the input Viterbi dictionary file <file> to use\n");
   printf("    -C <file>  : defines the input CV/CNN dictionary file <file> to use\n");
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
     DEBUG(printf("Vehicle_State: Lane %u %s Speed %.1f\n", vehicle_state.lane, lane_names[vehicle_state.lane], vehicle_state.speed));
 
     /* The computer vision kernel performs object recognition on the
-     * next image, and returns the corresponding label. 
+     * next image, and returns the corresponding label.
      * This process takes place locally (i.e. within this car).
      */
    #ifdef TIME
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
    #endif
 
     // Here we will simulate multiple cases, based on global vit_msgs_behavior
-    int num_vit_msgs = 1;   // the number of messages to send this time step (1 is default) 
+    int num_vit_msgs = 1;   // the number of messages to send this time step (1 is default)
     switch(vit_msgs_behavior) {
     case 2: num_vit_msgs = total_obj; break;
     case 3: num_vit_msgs = total_obj; break;
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
     }
 
 
-    // EXECUTE the kernels using the now known inputs 
+    // EXECUTE the kernels using the now known inputs
    #ifdef TIME
     gettimeofday(&start_exec_cv, NULL);
    #endif
