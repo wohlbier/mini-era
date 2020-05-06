@@ -8,8 +8,8 @@
 # python mio_training.py
 # python mio_inference.py
 
-#FROM nvcr.io/nvidia/tensorflow:20.03-tf2-py3 # tf2 no worky
-FROM nvcr.io/nvidia/tensorflow:20.03-tf1-py3
+#FROM nvcr.io/nvidia/tensorflow:20.03-tf1-py3 # gpu
+FROM tensorflow/tensorflow:1.15.2             # cpu
 
 ARG PROXY
 ENV http_proxy $PROXY
@@ -34,6 +34,6 @@ RUN pip install keras
 COPY . /workspace/mini-era
 
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
-RUN cd mini-era && \
+RUN cd /workspace/mini-era && \
     make allclean && \
     make all
