@@ -1,0 +1,18 @@
+# To build this image
+# cd /path/to/data
+# docker build --rm -f /path/to/this/file/Dockerfile_data -t miniera:data .
+# e.g.,
+# $ pwd
+# /DATA/SDH/EPOCHS/data
+# $ docker build --rm -f /home/jgwohlbier/DSSoC/IBM/mini-era/Dockerfile_data -t miniera:data .
+
+# Using the image in a dockerfile
+# FROM miniera:data AS data
+# FROM tensorflow/tensorflow:1.15.2
+# COPY --from=data /data /data
+# RUN cd /data && \
+#    tar xJf MIO-TCD-Classification.tar.xz
+
+FROM alpine:3.11.3
+RUN mkdir /data
+COPY MIO-TCD-Classification.tar.xz /data
