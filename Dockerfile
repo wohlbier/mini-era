@@ -46,3 +46,8 @@ RUN cd /workspace/mini-era && \
 # create numpy data files
 RUN cd /workspace/mini-era/cv/CNN_MIO_KERAS && \
     python mio_dataset.py
+
+# when run with -v /path/to/arm:/arm
+ENV ALLINEA_LICENSE_DIR=/arm/forge/licenses
+ENV PATH="/arm/forge/20.0.3/bin:${PATH}"
+ENV ALLINEA_NO_TIMEOUT=1
