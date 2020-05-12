@@ -40,9 +40,9 @@ RUN pip install keras
 COPY . /workspace/mini-era
 
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
-RUN cd /workspace/mini-era && \
-    make allclean && \
-    make sim_main vsim_main
+RUN cd /workspace/mini-era/build && \
+    cmake ../ && \
+    make
 
 # create numpy data files
 RUN cd /workspace/mini-era/cv/CNN_MIO_KERAS && \
