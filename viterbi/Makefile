@@ -495,4 +495,3 @@ $(OBJDIR_FET)/viterbi_ftest.o: viterbi_standalone.h utils.h
 
 depend:;	makedepend -fMakefile -- $(CFLAGS) -- $(L_SRC) $(T_SRC)
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-

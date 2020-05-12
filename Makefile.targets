@@ -172,7 +172,7 @@ gp_$(C_S_TARGET): $(C_S_OBJ_G_DIR) $(C_S_OBJ_G) libviterbi_gp libfmcwdist
 
 
 
-trace: objdirs $(TARGET) it-$(TARGET) $(C_TARGET) f$(C_TARGET) it-$(C_TARGET) it-f$(C_TARGET) v$(TARGET) v$(C_TARGET) vf$(C_TARGET) gp_$(TARGET) gp_$(C_TARGET) 
+trace: objdirs $(TARGET) it-$(TARGET) $(C_TARGET) f$(C_TARGET) it-$(C_TARGET) it-f$(C_TARGET) v$(TARGET) v$(C_TARGET) vf$(C_TARGET) gp_$(TARGET) gp_$(C_TARGET)
 
 sim: objdirs $(S_TARGET) it-$(S_TARGET) $(C_S_TARGET) f$(C_S_TARGET) it-$(C_S_TARGET) it-f$(C_S_TARGET) v$(TARGET) v$(C_S_TARGET) vf$(C_S_TARGET) gp_$(TARGET) gp_$(C_S_TARGET)
 
@@ -187,13 +187,13 @@ objdirs: $(OBJDIR) $(C_OBJDIR) $(FC_OBJDIR) $(IT_OBJDIR) $(ITC_OBJDIR) $(ITFC_OB
 util_prog:
 	cd utils; make -f $(MFILE) all
 
-test: 
+test:
 	cd utils; make -f $(MFILE) test
 
-vtest: 
+vtest:
 	cd utils; make -f $(MFILE) vtest
 
-tracegen: 
+tracegen:
 	cd utils; make -f $(MFILE) tracegen
 
 libviterbi:
@@ -528,4 +528,3 @@ obj/gen_trace.o: gen_trace.h
 
 depend:;	makedepend -f$(MFILE) -- $(CFLAGS) -- $(SRC) $(TRGN_SRC) $(G_SRC)
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-

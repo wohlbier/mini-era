@@ -14,8 +14,8 @@ INCLUDES =
 PYTHONINCLUDES = -I/usr/include/python3.6m
 
 
-LFLAGS = -Lviterbi -Lradar 
-#LFLAGS += 
+LFLAGS = -Lviterbi -Lradar
+#LFLAGS +=
 #LIBS = -lviterbi -lfmcwdist -lpthread -ldl -lutil -lm -lpython2.7
 LIBS     = -lviterbi -lfmcwdist -lpthread -ldl -lutil -lm
 LIBSG    = -lviterbi_gp -lfmcwdist_gp -lpthread -ldl -lutil -lm

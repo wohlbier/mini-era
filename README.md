@@ -1,3 +1,11 @@
+# jgw
+Targets:
+- `gp-`: `-g -pg` for Gnu Prof
+- `t-` : `-DINT_TIME` for counting timings with ints
+
+
+
+
 # Mini-ERA: Simplified Version of the Main ERA Workload
 
 This is a top-level driver for the Mini-ERA workload.

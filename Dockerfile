@@ -23,6 +23,7 @@ ENV https_proxy $PROXY
 
 RUN apt-get update && \
     apt-get install -y \
+    clang \
     cmake \
     emacs \
     libsm6 \
@@ -41,7 +42,7 @@ COPY . /workspace/mini-era
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
 RUN cd /workspace/mini-era && \
     make allclean && \
-    make all
+    make sim_main vsim_main
 
 # create numpy data files
 RUN cd /workspace/mini-era/cv/CNN_MIO_KERAS && \
