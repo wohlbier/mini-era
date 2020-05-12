@@ -40,8 +40,11 @@ RUN pip install keras
 COPY . /workspace/mini-era
 
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
-RUN cd /workspace/mini-era/build && \
-    cmake ../ && \
+RUN cd /workspace/mini-era/build_gcc && \
+    ../arch/gcc.sh && \
+    make
+RUN cd /workspace/mini-era/build_clang && \
+    ../arch/clang.sh && \
     make
 
 # create numpy data files
