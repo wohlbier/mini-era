@@ -42,10 +42,10 @@ COPY . /workspace/mini-era
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
 RUN cd /workspace/mini-era/build_gcc && \
     ../arch/gcc.sh && \
-    make
+    make VERBOSE=1
 RUN cd /workspace/mini-era/build_clang && \
     ../arch/clang.sh && \
-    make
+    make VERBOSE=1
 
 # create numpy data files
 RUN cd /workspace/mini-era/cv/CNN_MIO_KERAS && \
