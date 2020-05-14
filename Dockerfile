@@ -29,6 +29,7 @@ RUN apt-get update && \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    llvm \
     python3-dev
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install libopencv-dev -y
