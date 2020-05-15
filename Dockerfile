@@ -1,8 +1,8 @@
 # docker build --rm --build-arg PROXY=$http_proxy -t miniera .
 # on seville
-# nvidia-docker run -it miniera:latest /bin/bash
+# nvidia-docker run --rm -it miniera:latest /bin/bash
 # on lambda
-# docker run --gpus all -it miniera:latest /bin/bash
+# docker run --gpus all --rm -it miniera:latest /bin/bash
 
 # data image to get data files from
 FROM miniera:data AS data
