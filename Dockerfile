@@ -8,6 +8,8 @@
 
 # data image to get data files from
 FROM miniera:data AS data
+# accelseeker images
+FROM accelseeker:latest AS as
 
 # gpu
 #FROM nvcr.io/nvidia/tensorflow:20.03-tf1-py3
@@ -18,6 +20,9 @@ FROM tensorflow/tensorflow:1.15.2
 COPY --from=data /data /data
 RUN cd /data && \
     tar xJf MIO-TCD-Classification.tar.xz
+
+# get AccelSeeker
+COPY --from=as /workspace/AccelSeeker /workspace/AccelSeeker
 
 ARG PROXY
 ENV http_proxy $PROXY
