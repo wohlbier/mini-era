@@ -15,5 +15,13 @@ cmake \
     -DCMAKE_C_FLAGS="${CFLAGS}" \
     $dir
 
-# Generate miniera.profdata with:
-# llvm-profdata merge -output=miniera.profdata default.profraw
+# 1. run application:
+#    ./build_clang/miniera
+# 2. generate miniera.profdata
+#    llvm-profdata merge -output=miniera.profdata default.profraw
+# 3. Rebuild application with -fprofile-instr-use=... above
+#    cd build_clang
+#    rm -rf *
+#    (comment OUT -fprofile-instr-generate and IN -fprofile-instr-use=...
+#    ../arch/clang.sh
+#    make ir
