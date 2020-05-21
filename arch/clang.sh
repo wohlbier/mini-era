@@ -5,6 +5,7 @@ dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/../
 # -DINT_TIME
 
 CFLAGS="-DUSE_SIM_ENVIRON"
+#CFLAGS+=" -DVERBOSE"
 CFLAGS+=" -fprofile-instr-generate"
 #CFLAGS+=" -fprofile-instr-use=/workspace/mini-era/miniera.profdata"
 

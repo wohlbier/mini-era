@@ -3,6 +3,8 @@
 # nvidia-docker run --rm -it miniera:latest /bin/bash
 # on lambda
 # docker run --gpus all --rm -it miniera:latest /bin/bash
+# on sdh01
+# docker run -v /DATA/SDH/packages/arm:/arm -v $(pwd)/log:/workspace/mini-era/log --cap-add=SYS_PTRACE --rm -it miniera:latest /bin/bash
 
 # data image to get data files from
 FROM miniera:data AS data
@@ -29,7 +31,7 @@ RUN apt-get update && \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    llvm \
+    llvm-8-dev \
     python3-dev
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install libopencv-dev -y

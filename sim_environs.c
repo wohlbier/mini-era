@@ -28,10 +28,10 @@ unsigned global_object_id = 0;
 object_state_t* the_objects[5];
 
 // This represents my car.
-object_state_t my_car;		
+object_state_t my_car;
 
 unsigned time_steps;            // The number of elapsed time steps
-unsigned max_time_steps = 5000; // The max time steps to simulate (default to 5000)
+unsigned max_time_steps = 20000; // The max time steps to simulate (default to 5000)
 
 // This controls whether we can have multiple obstacles in a lane at a time
 bool_t   one_obstacle_per_lane = false; // false = unlimited
@@ -65,7 +65,7 @@ unsigned* bike_sp_thds;
 unsigned* person_sp_thds;
 
 // These are defined in kernels_api but the world_description_file can alter their settings for a sim run.
-float car_goal_speed = 50.0; 
+float car_goal_speed = 50.0;
 float car_accel_rate = 15.0;
 float car_decel_rate = 15.0;
 
@@ -79,7 +79,7 @@ print_object(object_state_t* st) {
   case truck : printf("Truck "); break;
   case pedestrian : printf("Person "); break;
   case bicycle : printf("Bike "); break;
-  default: printf("ERROR "); 
+  default: printf("ERROR ");
   }
   printf("size %.1f in ", st->size);
   switch(st->lane) {
@@ -88,10 +88,10 @@ print_object(object_state_t* st) {
   case center : printf(" Middle "); break;
   case right : printf(" Right "); break;
   case rhazard : printf(" R-Hazard "); break;
-  default: printf("ERROR "); 
-  }  
+  default: printf("ERROR ");
+  }
   printf("at distance %.1f speed %.1f\n", st->distance, st->speed);
-}  
+}
 
 int    min_obst_lane;
 int    max_obst_lane;
@@ -176,7 +176,7 @@ init_sim_environs(char* wdesc_fn, vehicle_state_t* vehicle_state)
       return error;
     }
   }
-    
+
   /* #define NUM_TRUCK_SPEEDS    4 */
   if (fscanf(wdescF, "NUM_TRUCK_SPEEDS %u\n", &NUM_TRUCK_SPEEDS)) {
     printf("NUM_TRUCK_SPEEDS %u\n", NUM_TRUCK_SPEEDS);
@@ -292,13 +292,13 @@ init_sim_environs(char* wdesc_fn, vehicle_state_t* vehicle_state)
   if (fscanf(wdescF, "MY_CAR LANE %u SPEED %f\n", &(my_car.lane), &(my_car.speed))) {
     printf("MY_CAR LANE %u SPEED %.1f\n", my_car.lane, my_car.speed);
     vehicle_state->lane  = my_car.lane;
-    vehicle_state->speed = my_car.speed;    
+    vehicle_state->speed = my_car.speed;
   } else {
     printf("Error: unable to read MY_CAR LANE and SPEED from %s\n", wdesc_fn);
     return error;
   }
   printf("\n");
-  
+
   // Initialize everything else...
   for (int i = 0; i < 5; i++) {
     the_objects[i] = NULL;
@@ -324,13 +324,13 @@ init_sim_environs(char* wdesc_fn, vehicle_state_t* vehicle_state)
 /* NOTES:
  * In this implementation we do a back-to-front pass for each lane...
  * This ensures that there is "open space" behind a car before it "drops back" into that space
- * BUT this only works (well) if the cars/objects all move at the same rate (as one another).  
- * IF we allow objects to have different speeds, then there are different relative motions, and 
+ * BUT this only works (well) if the cars/objects all move at the same rate (as one another).
+ * IF we allow objects to have different speeds, then there are different relative motions, and
  *  the objects must ALSO avoid one another (presumably by altering their speed)
  */
 
 bool_t
-iterate_sim_environs(vehicle_state_t vehicle_state) 
+iterate_sim_environs(vehicle_state_t vehicle_state)
 {
   DEBUG(printf("In iterate_sim_environments with %u time_steps vs %u max\n", time_steps, max_time_steps));
   if (time_steps == max_time_steps) {
@@ -346,7 +346,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
 
   my_car.lane = vehicle_state.lane;
   my_car.speed = vehicle_state.speed;
-  
+
   // For each lane in the world, advance the objects relative to My-Car
   for (int in_lane = min_obst_lane; in_lane < max_obst_lane; in_lane++) {
     // Iterate through the objects in the lane from farthest to closest
@@ -357,7 +357,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
     while (obj != NULL) {
       int delta_dist = my_car.speed - obj->speed;
       float new_dist  = (obj->distance - (1.0 * delta_dist));
-      DEBUG(printf(" Lane %u ddist %d to new_dist %.1f for", in_lane, delta_dist, new_dist); print_object(obj)); 
+      DEBUG(printf(" Lane %u ddist %d to new_dist %.1f for", in_lane, delta_dist, new_dist); print_object(obj));
       if ((new_dist < 0) || (new_dist > MAX_DISTANCE)) { // Object is "off the world" (we've passed it completely)
 	DEBUG(printf("  new_dist < 0 or > MAX_DIST --> drop object from environment\n");
 	      printf("   OBJ :"); print_object(obj);
@@ -391,8 +391,8 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
       obj = obj->next; // move to the next object
     }
   }
-  
-  // Now determine for each major lane (i.e. Left, Middle, Right) 
+
+  // Now determine for each major lane (i.e. Left, Middle, Right)
   //   whether to add a new object or not...
   for (int in_lane = min_obst_lane; in_lane < max_obst_lane; in_lane++) {
     object_state_t * pobj = the_objects[in_lane];
@@ -417,7 +417,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
 	      si = NUM_CAR_SPEEDS;
 	    }
 	  }
-	} else if (objn < NEW_OBJ_TRUCK_THRESHOLD) { 
+	} else if (objn < NEW_OBJ_TRUCK_THRESHOLD) {
 	  no_p->object = truck;
 	  no_p->size =  MAX_OBJECT_SIZE; // 5.0; // UNUSED?
 	  for (int si = 0; si < NUM_TRUCK_SPEEDS; si++) {
@@ -437,7 +437,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
 	  }
 	}
 	else {
-	  no_p->object = pedestrian; 
+	  no_p->object = pedestrian;
 	  no_p->size =  MAX_OBJECT_SIZE; // 5.0; // UNUSED?
 	  for (int si = 0; si < NUM_PERSON_SPEEDS; si++) {
 	    if (spdn < person_sp_thds[si]) {
@@ -465,7 +465,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
       printf("  VizTrace: %d,", -vehicle_state.lane);
     } else {
       printf("  VizTrace: %d,", vehicle_state.lane);
-    }      
+    }
   }
   for (int in_lane = min_obst_lane; in_lane < max_obst_lane; in_lane++) {
     object_state_t* obj = the_objects[in_lane];
@@ -484,7 +484,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
 	if (output_viz_trace) {
 	  if (outputs_in_lane > 0) { printf(" "); }
 	  printf("%c:%u", vis_obj_ids[obj->object], (int)obj->distance);
-	  outputs_in_lane++;       
+	  outputs_in_lane++;
 	}
 	total_obj++;
 	obj = obj->next; // move to the next object
@@ -505,7 +505,7 @@ iterate_sim_environs(vehicle_state_t vehicle_state)
 void
 visualize_world()
 {
-  // For each lane 
+  // For each lane
   for (int x = 0; x < 5; x++) {
     // List the objects in the lane
     object_state_t* pobj = the_objects[x];
@@ -521,5 +521,3 @@ visualize_world()
   }
   printf("\n\n");
 }
-
-

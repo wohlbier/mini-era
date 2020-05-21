@@ -17,8 +17,8 @@ SET (SRCS
      read_trace.c)
 
 SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/usr/include/python3.6m")
-ADD_EXECUTABLE (miniera sim_environs.c ${SRCS})
-TARGET_LINK_LIBRARIES (miniera fft-1d radar viterbi python3.6m)
+ADD_EXECUTABLE (mini-era sim_environs.c ${SRCS})
+TARGET_LINK_LIBRARIES (mini-era fft-1d radar viterbi python3.6m)
 
 ADD_IR_TARGETS ("${SRCS}" IRTS)
 SET (IR_TARGETS "${IRTS} ${IR_TARGETS}")
