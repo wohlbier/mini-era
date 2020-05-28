@@ -30,7 +30,7 @@ FUNCTION (FP_TARGET SRCS)
       STRING (REPLACE ".c" "" base ${f})
       ADD_CUSTOM_TARGET (${base}.fp
                          COMMAND
-                         $ENV{LLVM_BLD_TREE}/bin/opt -block-freq -analyze
+                         $ENV{LLVM_BIN_DIR}/opt -block-freq -analyze
                          ${cflags}
                          ${CMAKE_CURRENT_BINARY_DIR}/${base}.ir
                          -o ${CMAKE_CURRENT_BINARY_DIR}/${base}.fp)

@@ -32,4 +32,5 @@ ADD_CUSTOM_TARGET (ir
 
 # target to build all fp
 ADD_CUSTOM_TARGET (fp
-                   COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${FP_TARGETS})
+                   COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${FP_TARGETS}
+                   DEPENDS ir)

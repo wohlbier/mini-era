@@ -25,5 +25,5 @@ cmake \
 #    rm -rf *
 #    (comment OUT -fprofile-instr-generate and IN -fprofile-instr-use=...
 #    ../arch/clang.sh
-#    make ir
+#    (make ir)
 #    make fp

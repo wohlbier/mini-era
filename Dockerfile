@@ -22,13 +22,11 @@ ENV https_proxy $PROXY
 
 RUN apt-get update && \
     apt-get install -y \
-    clang \
     cmake \
     emacs \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    llvm-8-dev \
     python3-dev
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install libopencv-dev -y
@@ -38,6 +36,9 @@ RUN pip install opencv-python
 RUN pip install keras
 
 COPY . /workspace/mini-era
+
+ENV LLVM_BIN_DIR=/workspace/AccelSeeker/llvm-8.0.0/build/bin
+ENV PATH=${LLVM_BIN_DIR}:${PATH}
 
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
 RUN cd /workspace/mini-era/build_gcc && \
