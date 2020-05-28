@@ -3,8 +3,15 @@ Targets:
 - `gp-`: `-g -pg` for Gnu Prof
 - `t-` : `-DINT_TIME` for counting timings with ints
 
-
-
+```
+docker build --rm --build-arg PROXY=$http_proxy -t miniera .
+# on seville
+nvidia-docker run --rm -it miniera:latest /bin/bash
+# on lambda
+docker run --gpus all --rm -it miniera:latest /bin/bash
+# on sdh01
+docker run -v /DATA/SDH/packages/arm:/arm -v $(pwd)/log:/workspace/mini-era/log --cap-add=SYS_PTRACE --rm -it miniera:latest /bin/bash
+```
 
 # Mini-ERA: Simplified Version of the Main ERA Workload
 

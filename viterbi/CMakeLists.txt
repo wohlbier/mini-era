@@ -21,3 +21,6 @@ TARGET_LINK_LIBRARIES (viterbi_test viterbi)
 # manually add viterbi_flat.c
 ADD_IR_TARGETS ("${LIB_SRCS} viterbi_flat.c" IRTS)
 SET (IR_TARGETS "${IRTS} ${IR_TARGETS}" PARENT_SCOPE)
+
+ADD_FP_TARGETS ("${LIB_SRCS} viterbi_flat.c" FPTS)
+SET (FP_TARGETS "${FPTS} ${FP_TARGETS}" PARENT_SCOPE)
