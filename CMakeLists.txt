@@ -20,11 +20,12 @@ SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/usr/include/python3.6m")
 ADD_EXECUTABLE (mini-era sim_environs.c ${SRCS})
 TARGET_LINK_LIBRARIES (mini-era fft-1d radar viterbi python3.6m)
 
-ADD_IR_TARGETS ("${SRCS}" IRTS)
-SET (IR_TARGETS "${IRTS} ${IR_TARGETS}")
+ADD_IR_TARGETS ("${SRCS}" IRTS IRFS)
+SET (IR_TARGETS "${IRTS};${IR_TARGETS}")
+SET (IR_FILES "${IRFS};${IR_FILES}")
 
 ADD_FP_TARGETS ("${SRCS}" FPTS)
-SET (FP_TARGETS "${FPTS} ${FP_TARGETS}")
+SET (FP_TARGETS "${FPTS};${FP_TARGETS}")
 
 # target to build all ir
 ADD_CUSTOM_TARGET (ir
@@ -33,4 +34,11 @@ ADD_CUSTOM_TARGET (ir
 # target to build all fp
 ADD_CUSTOM_TARGET (fp
                    COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${FP_TARGETS}
+                   DEPENDS ir)
+
+MESSAGE (STATUS "irfs: ${IR_FILES}")
+
+ADD_CUSTOM_TARGET (linkir
+                   COMMAND
+                   llvm-link -S ${IR_FILES} -o ${CMAKE_BINARY_DIR}/miniera.ir
                    DEPENDS ir)

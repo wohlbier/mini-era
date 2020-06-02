@@ -12,7 +12,7 @@ FUNCTION (GET_INCS cflags)
 ENDFUNCTION ()
 
 # adds target for IR.
-FUNCTION (IR_TARGET SRCS)
+FUNCTION (IR_TARGET SRCS IRFS)
    GET_INCS(cflags)
    FOREACH (f ${SRCS})
       STRING (REPLACE ".c" "" base ${f})
@@ -21,7 +21,9 @@ FUNCTION (IR_TARGET SRCS)
                          ${cflags}
                          ${CMAKE_CURRENT_SOURCE_DIR}/${f}
                          -o ${CMAKE_CURRENT_BINARY_DIR}/${base}.ir)
+      SET (irfl "${irfl};${CMAKE_CURRENT_BINARY_DIR}/${base}.ir")
    ENDFOREACH ()
+   SET (${IRFS} "${irfl}" PARENT_SCOPE)
 ENDFUNCTION ()
 
 # adds target for fp
@@ -46,12 +48,13 @@ FUNCTION (X_TO_Y dotX dotY Xs Ys)
    SET (${Ys} "${l}" PARENT_SCOPE)
 ENDFUNCTION ()
 
-FUNCTION (ADD_IR_TARGETS SRCS IR_TARGETS)
+FUNCTION (ADD_IR_TARGETS SRCS IR_TARGETS IR_FILES)
    IF (CMAKE_C_COMPILER_ID STREQUAL Clang)
       STRING (REPLACE " " ";" SRCS "${SRCS}")
-      IR_TARGET ("${SRCS}")
+      IR_TARGET ("${SRCS}" IRFS)
       X_TO_Y (".c" ".ir" "${SRCS}" IRTS)
       SET (${IR_TARGETS} "${IRTS}" PARENT_SCOPE)
+      SET (${IR_FILES} "${IRFS}" PARENT_SCOPE)
    ENDIF ()
 ENDFUNCTION ()
 
