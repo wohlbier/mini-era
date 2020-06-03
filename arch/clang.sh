@@ -29,4 +29,5 @@ cmake \
 #    (make ir)
 #    (make fp)
 #    (make mini-era.ir)
-#    make gv
+#    (make gv)
+#    make sw_hw_area

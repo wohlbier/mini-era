@@ -16,6 +16,9 @@ RUN cd /data && \
 # get AccelSeeker
 COPY --from=as /workspace/AccelSeeker /workspace/AccelSeeker
 
+ENV AS_PATH=/workspace/AccelSeeker
+ENV PATH=${AS_PATH}/scripts:${PATH}
+
 ARG PROXY
 ENV http_proxy $PROXY
 ENV https_proxy $PROXY
@@ -43,16 +46,17 @@ ENV PATH=${LLVM_BIN_DIR}:${PATH}
 ENV LLVM_LIB_DIR=/workspace/AccelSeeker/llvm-8.0.0/build/lib
 
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
+# create numpy data files
+RUN cd /workspace/mini-era/cv/CNN_MIO_KERAS && \
+    python mio_dataset.py
+
+# build minieras
 RUN cd /workspace/mini-era/build_gcc && \
     ../arch/gcc.sh && \
     make VERBOSE=1
 RUN cd /workspace/mini-era/build_clang && \
     ../arch/clang.sh && \
     make VERBOSE=1
-
-# create numpy data files
-RUN cd /workspace/mini-era/cv/CNN_MIO_KERAS && \
-    python mio_dataset.py
 
 # when run with -v /path/to/arm:/arm
 # also need --cap-add=SYS_PTRACE in docker run

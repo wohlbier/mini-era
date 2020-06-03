@@ -54,4 +54,4 @@ FOREACH (l RANGE ${LEVEL})
 ENDFOREACH ()
 ADD_CUSTOM_TARGET (sw_hw_area
   COMMAND ${CMAKE_SOURCE_DIR}/swhw.sh ${LEVEL}
-  DEPENDS mini-era.ir)
+  DEPENDS gv)
