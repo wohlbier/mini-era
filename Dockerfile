@@ -40,6 +40,7 @@ COPY . /workspace/mini-era
 
 ENV LLVM_BIN_DIR=/workspace/AccelSeeker/llvm-8.0.0/build/bin
 ENV PATH=${LLVM_BIN_DIR}:${PATH}
+ENV LLVM_LIB_DIR=/workspace/AccelSeeker/llvm-8.0.0/build/lib
 
 ENV PYTHONPATH=/workspace/mini-era/cv/CNN_MIO_KERAS
 RUN cd /workspace/mini-era/build_gcc && \

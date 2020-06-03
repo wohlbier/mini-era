@@ -25,7 +25,8 @@ cmake \
 #    rm -rf *
 #    (comment OUT -fprofile-instr-generate and IN -fprofile-instr-use=...
 #    ../arch/clang.sh
+#    (intermediate targets)
 #    (make ir)
-#    make fp
-#    make mini-era.ir
+#    (make fp)
+#    (make mini-era.ir)
 #    make gv

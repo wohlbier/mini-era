@@ -44,7 +44,7 @@ FUNCTION (GV_TARGET PROG)
   ADD_CUSTOM_TARGET (gv
     COMMAND
     $ENV{LLVM_BIN_DIR}/opt -load
-    $ENV{LLVM_BIN_DIR}/lib/AccelSeekerIO.so
+    $ENV{LLVM_LIB_DIR}/AccelSeekerIO.so
     -AccelSeekerIO -stats > /dev/null
     ${CMAKE_CURRENT_BINARY_DIR}/${PROG}.ir
     DEPENDS ${PROG}.ir)
@@ -56,7 +56,7 @@ FUNCTION (SW_HW_AREA_TGT PROG LEVEL)
     COMMAND echo "${LEVEL}" > level.txt
     COMMAND
     $ENV{LLVM_BIN_DIR}/opt -load
-    $ENV{LLVM_BIN_DIR}/lib/AccelSeeker.so
+    $ENV{LLVM_LIB_DIR}/AccelSeeker.so
     -AccelSeeker -stats > /dev/null
     ${CMAKE_CURRENT_BINARY_DIR}/${PROG}.ir)
   # depend responsibility of caller
