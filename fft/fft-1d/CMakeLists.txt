@@ -4,9 +4,9 @@ SET (INPUT_SIZE LARGE)
 SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DINPUT_SIZE=INPUT_SIZE_${INPUT_SIZE}")
 
 SET (LIB_SRCS
-     fft.c
-     octave.c
-     timer.c)
+  fft.c
+  octave.c
+  timer.c)
 
 ADD_LIBRARY (fft-1d ${LIB_SRCS})
 TARGET_LINK_LIBRARIES (fft-1d m)

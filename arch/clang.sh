@@ -27,3 +27,5 @@ cmake \
 #    ../arch/clang.sh
 #    (make ir)
 #    make fp
+#    make mini-era.ir
+#    make gv

@@ -12,9 +12,9 @@ ADD_SUBDIRECTORY (radar)
 ADD_SUBDIRECTORY (viterbi)
 
 SET (SRCS
-     kernels_api.c
-     main.c
-     read_trace.c)
+  kernels_api.c
+  main.c
+  read_trace.c)
 
 SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/usr/include/python3.6m")
 ADD_EXECUTABLE (mini-era sim_environs.c ${SRCS})
@@ -31,15 +31,27 @@ STRING (REPLACE ";" " " FP_TARGETS "${FP_TARGETS}") # put spaces back for ir.sh
 
 # target to build all ir
 ADD_CUSTOM_TARGET (ir
-                   COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${IR_TARGETS})
+  COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${IR_TARGETS})
 
 # link all ir files
 ADD_CUSTOM_TARGET (mini-era.ir
-                   COMMAND
-                   llvm-link -S ${IR_FILES} -o ${CMAKE_BINARY_DIR}/mini-era.ir
-                   DEPENDS ir)
+  COMMAND
+  llvm-link -S ${IR_FILES} -o ${CMAKE_BINARY_DIR}/mini-era.ir
+  DEPENDS ir)
 
 # target to build all fp
 ADD_CUSTOM_TARGET (fp
-                   COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${FP_TARGETS}
-                   DEPENDS ir)
+  COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${FP_TARGETS}
+  DEPENDS ir)
+
+# add target for call graph files
+GV_TARGET(mini-era)
+
+# add targets for swhw levels
+SET (LEVEL 6)
+FOREACH (l RANGE ${LEVEL})
+  SW_HW_AREA_TGT (mini-era ${l})
+ENDFOREACH ()
+ADD_CUSTOM_TARGET (sw_hw_area
+  COMMAND ${CMAKE_SOURCE_DIR}/swhw.sh ${LEVEL}
+  DEPENDS mini-era.ir)

@@ -1,14 +1,14 @@
 SET (LIB_SRCS
-     descrambler_function.c
-     viterbi_decoder_generic.c
-     viterbi_standalone.c)
+  descrambler_function.c
+  viterbi_decoder_generic.c
+  viterbi_standalone.c)
 
 ADD_LIBRARY(viterbi ${LIB_SRCS})
 
 SET (LIB_FV_SRCS
-     descrambler_function.c
-     viterbi_flat.c
-     viterbi_standalone.c)
+  descrambler_function.c
+  viterbi_flat.c
+  viterbi_standalone.c)
 
 ADD_LIBRARY(fv_viterbi ${LIB_FV_SRCS})
 
