@@ -53,6 +53,7 @@ ENDFUNCTION ()
 # adds targets for SW, HW, and AREA estimation bottom up
 FUNCTION (SW_HW_AREA_TGT PROG LEVEL)
   ADD_CUSTOM_TARGET (sw_hw_area_${LEVEL}
+    COMMAND echo "${LEVEL}" > level.txt
     COMMAND
     $ENV{LLVM_BIN_DIR}/opt -load
     $ENV{LLVM_BIN_DIR}/lib/AccelSeeker.so
