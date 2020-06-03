@@ -22,23 +22,24 @@ TARGET_LINK_LIBRARIES (mini-era fft-1d radar viterbi python3.6m)
 
 ADD_IR_TARGETS ("${SRCS}" IRTS IRFS)
 SET (IR_TARGETS "${IRTS};${IR_TARGETS}")
+STRING (REPLACE ";" " " IR_TARGETS "${IR_TARGETS}") # put spaces back for ir.sh
 SET (IR_FILES "${IRFS};${IR_FILES}")
 
 ADD_FP_TARGETS ("${SRCS}" FPTS)
 SET (FP_TARGETS "${FPTS};${FP_TARGETS}")
+STRING (REPLACE ";" " " FP_TARGETS "${FP_TARGETS}") # put spaces back for ir.sh
 
 # target to build all ir
 ADD_CUSTOM_TARGET (ir
                    COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${IR_TARGETS})
 
+# link all ir files
+ADD_CUSTOM_TARGET (mini-era.ir
+                   COMMAND
+                   llvm-link -S ${IR_FILES} -o ${CMAKE_BINARY_DIR}/mini-era.ir
+                   DEPENDS ir)
+
 # target to build all fp
 ADD_CUSTOM_TARGET (fp
                    COMMAND ${CMAKE_SOURCE_DIR}/ir.sh ${FP_TARGETS}
-                   DEPENDS ir)
-
-MESSAGE (STATUS "irfs: ${IR_FILES}")
-
-ADD_CUSTOM_TARGET (linkir
-                   COMMAND
-                   llvm-link -S ${IR_FILES} -o ${CMAKE_BINARY_DIR}/miniera.ir
                    DEPENDS ir)
