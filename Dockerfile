@@ -17,7 +17,7 @@ RUN cd /data && \
 COPY --from=as /workspace/AccelSeeker /workspace/AccelSeeker
 
 ENV AS_PATH=/workspace/AccelSeeker
-ENV PATH=${AS_PATH}/scripts:${PATH}
+ENV PATH=${AS_PATH}/scripts:${AS_PATH}/accel_selection_algo_src:${PATH}
 
 ARG PROXY
 ENV http_proxy $PROXY
