@@ -25,6 +25,7 @@ ENV https_proxy $PROXY
 
 RUN apt-get update && \
     apt-get install -y \
+    bc \
     cmake \
     emacs \
     less \
