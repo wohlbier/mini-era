@@ -61,6 +61,7 @@ void descrambler(uint8_t* in, int psdusize, char* out_msg) //definition
     //comp3 = out[index];
     state = ((state << 1) & 0x7e) | feedback;
   }
+
   
   for (uint32_t i = 0; i < msg_length; i++) {
     out_msg[i] = out[i+26];

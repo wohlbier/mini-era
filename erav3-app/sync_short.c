@@ -66,6 +66,7 @@ void sync_short( unsigned num_inputs, fx_pt input_sample[SYNC_S_MAX_IN_SIZE], fx
     } // end-for
 
     *num_outputs = out_idx;
+    DEBUG(printf(" synch_short set num_outputs to %u\n", *num_outputs));
     // if (out_idx >= MAX_SAMPLES) {
     //   frame = false;
     //   DEBUG(printf(" came to the MAX_SAMPLES (%u)...\n", MAX_SAMPLES));

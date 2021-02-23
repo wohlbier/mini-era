@@ -22,6 +22,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif 
+
 #define MAX_PAYLOAD_SIZE    1500
 #define MAX_PSDU_SIZE       (MAX_PAYLOAD_SIZE + 28) // MAC, CRC
 #define MAX_SYM             (((16 + 8 * MAX_PSDU_SIZE + 6) / 24) + 1)
@@ -120,7 +124,8 @@ typedef struct {
 #define FRAME_EQ_OUT_MAX_SIZE  FRAME_EQ_MAX_PACKETS * 48
 
 // ofdm
-#define DECODE_IN_SIZE_MAX  MAX_ENCODED_BITS
+#define OFDM_PAD_ENTRIES        80 // extra pad space used by decode (?)
+#define DECODE_IN_SIZE_MAX  FRAME_EQ_OUT_MAX_SIZE // MAX_ENCODED_BITS
 
 // sync_long
 #define SYNC_L_OUT_MAX_SIZE 32620

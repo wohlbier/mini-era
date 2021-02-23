@@ -1,7 +1,7 @@
 /** This code represents the current ERA-V3 GnuRadio ieee802_11 TRANSMIT pipeline 
     TRANSMIT:
     1. Form a message : input string up to 1500 characters : char[1501] (terminating '\0')? [Input]
-    2. WiFi-MAC : gr-ieee802-11/mac.cc             do_wifi_mac
+    2. WiFi-MAC : gr-ieee802-11/mac.cc             generate_mac_data_frame (was do_wifi_mac)
     3. Wifi-Mapper : gr-ieee802-11/mapper.cc       do_mapper_work
     4. Packet-Header Generator : gnuradio/gr-digital/lib/packet_headergenerator_bb_impl.cc    
     5a. Chunks-to-Symbols : gnuradio/gr-digital/lib/chunks_to_symbols_impl.*
@@ -21,7 +21,9 @@
  **    1. We set punctured_data == encoded_data (no puncturing effect) -- TRUE only for BPSK_1_2, QPSK_1_2, and QAM16_1_2
  **    2. We skip the actual "puncturing" code (at this time)
  **    3. In generate_signal_field we explicitly set the BPSK_1_2 parameters, etc.
+ **         Actually, this might be general -- I think this is for the header, which is always BPSK_1_2 encoded...?
  **    4. We don't use "chunks_to_symbols" routine -- we use the simple mapping of BPSK_1_2 directly in xmit_pipe code for now
+ **         Not sure this matters -- I don't see where the d_mapping is used?
  **
  ** If we decide to go to a more general implementation of the pipeline, then we'll need to address these issues.
  **/
@@ -41,6 +43,11 @@
 #include "base.h"
 #include "xmit_pipe.h"
 
+#ifdef USE_SIMPLE_DFT
+ #include "simple_dft.h"
+#else
+ #include "fft-1d.h"
+#endif
 
 extern bool show_output;
 extern bool do_add_pre_pad;
@@ -117,7 +124,7 @@ void interleave(const char *in, char *out, int in_sym, /*frame_param* frame,*/ i
 /*********************************************************************************
  * The CRC code is taken from an open source CRC package, which is used here 
  * to provide the proper GnuRadio 32-bit CRC encoding.  The contents taken from
- * are in crc.h and crc.c and retain copyright and author details are retained.
+ * are in crc.h and crc.c where copyright and author details are retained.
  *********************************************************************************/
 #include "crc.h"
 
@@ -278,12 +285,12 @@ void generate_mac_data_frame(const char *msdu, int msdu_size, int *psdu_size) {
 }
 
 
-// This is the app_in work from gr-ieee802_11/mac.cc
-void do_wifi_mac(int msg_len, char * in_msg, int* psdu_length) {
-  // The gr-ieee802.11p code for app_in calls generate_mac_data_frame and then publishes the resulting d_psdu to phy_out
-  generate_mac_data_frame(in_msg, msg_len, psdu_length);
-  // I think the rest is just setting up output port xfer data, etc.
-}
+/* // This is the app_in work from gr-ieee802_11/mac.cc */
+/* void do_wifi_mac(int msg_len, char * in_msg, int* psdu_length) { */
+/*   // The gr-ieee802.11p code for app_in calls generate_mac_data_frame and then publishes the resulting d_psdu to phy_out */
+/*   generate_mac_data_frame(in_msg, msg_len, psdu_length); */
+/*   // I think the rest is just setting up output port xfer data, etc. */
+/* } */
 
 
 
@@ -313,320 +320,254 @@ char symbols[24528];          // = (char*)calloc((frame.n_encoded_bits / d_ofdm.
 
 int do_mapper_work(int psdu_length) // int noutput, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items )
 {
-  /* unsigned char *out = (unsigned char*)output_items[0]; */
-  /* dout << "MAPPER called offset: " << d_symbols_offset << */
-  /* 	"   length: " << d_symbols_len << std::endl; */
-  //printf("\nMAPPER called offset: %d    length: %d\n", d_symbols_offset, d_symbols_len);
+  /* frame_param frame(d_ofdm, psdu_length); */
+  d_frame.psdu_size = psdu_length;
+  // number of symbols (17-11)
+  d_frame.n_sym = (int) ceil((16 + 8 * d_frame.psdu_size + 6) / (double) d_ofdm.n_dbps);
+  d_frame.n_data_bits = d_frame.n_sym * d_ofdm.n_dbps;
+  // number of padding bits (17-13)
+  d_frame.n_pad = d_frame.n_data_bits - (16 + 8 * d_frame.psdu_size + 6);
+  d_frame.n_encoded_bits = d_frame.n_sym * d_ofdm.n_cbps;
 
-  while(!d_symbols_offset) {
-    /* pmt::pmt_t msg(delete_head_nowait(pmt::intern("in"))); */
-    
-    /* if(!msg.get()) { */
-    /* 	return 0; */
-    /* } */
-    
-    /* if(pmt::is_pair(msg))  */
-    {
-      /* 	dout << "MAPPER: received new message" << std::endl; */
-      /* 	gr::thread::scoped_lock lock(d_mutex); */
-    
-      /* int psdu_length = pmt::blob_length(pmt::cdr(msg)); */
-      /* const char *psdu = static_cast<const char*>(pmt::blob_data(pmt::cdr(msg))); */
-    
-      /* // ############ INSERT MAC STUFF */
-      /* frame_param frame(d_ofdm, psdu_length); */
-      d_frame.psdu_size = psdu_length;
-      // number of symbols (17-11)
-      d_frame.n_sym = (int) ceil((16 + 8 * d_frame.psdu_size + 6) / (double) d_ofdm.n_dbps);
-      d_frame.n_data_bits = d_frame.n_sym * d_ofdm.n_dbps;
-      // number of padding bits (17-13)
-      d_frame.n_pad = d_frame.n_data_bits - (16 + 8 * d_frame.psdu_size + 6);
-      d_frame.n_encoded_bits = d_frame.n_sym * d_ofdm.n_cbps;
-
-      DEBUG(printf("\nOFDM: encoding: %u\n", d_ofdm.encoding);
-	    printf("      rate_fld: %u\n", d_ofdm.rate_field);
-	    printf("      n_bpsc  : %u\n", d_ofdm.n_bpsc);
-	    printf("      n_cbps  : %u\n", d_ofdm.n_cbps);
-	    printf("      n_dbps  : %u\n", d_ofdm.n_dbps);
-	    printf("\nFRAME: psdu_sz: %u\n", d_frame.psdu_size);
-	    printf("       n_sym  : %u\n", d_frame.n_sym);
-	    printf("       n_pad  : %u\n", d_frame.n_pad);
-	    printf("       n_enc  : %u\n", d_frame.n_encoded_bits);
-	    printf("       n_dbits: %u\n", d_frame.n_data_bits));
+  DEBUG(printf("\nOFDM: encoding: %u\n", d_ofdm.encoding);
+	printf("      rate_fld: %u\n", d_ofdm.rate_field);
+	printf("      n_bpsc  : %u\n", d_ofdm.n_bpsc);
+	printf("      n_cbps  : %u\n", d_ofdm.n_cbps);
+	printf("      n_dbps  : %u\n", d_ofdm.n_dbps);
+	printf("\nFRAME: psdu_sz: %u\n", d_frame.psdu_size);
+	printf("       n_sym  : %u\n", d_frame.n_sym);
+	printf("       n_pad  : %u\n", d_frame.n_pad);
+	printf("       n_enc  : %u\n", d_frame.n_encoded_bits);
+	printf("       n_dbits: %u\n", d_frame.n_data_bits));
       
-      /* if (d_frame.n_sym > MAX_SYM) { */
-      /* 	std::cout << "packet too large, maximum number of symbols is " << MAX_SYM << std::endl; */
-      /* 	return 0; */
-      /* } */
-    
-      //alloc memory for modulation steps
-      /* char *data_bits        = (char*)calloc(d_frame.n_data_bits, sizeof(char)); */
-      /* char *scrambled_data   = (char*)calloc(d_frame.n_data_bits, sizeof(char)); */
-      /* char *encoded_data     = (char*)calloc(d_frame.n_data_bits * 2, sizeof(char)); */
-      /* char *punctured_data   = (char*)calloc(d_frame.n_encoded_bits, sizeof(char)); */
-      /* char *interleaved_data = (char*)calloc(d_frame.n_encoded_bits, sizeof(char)); */
-      /* char *symbols          = (char*)calloc((d_frame.n_encoded_bits / d_ofdm.n_bpsc), sizeof(char)); */
-
-      //generate the WIFI data field, adding service field and pad bits
-      //generate_bits(psdu, data_bits, frame);
-      //void generate_bits(const char *psdu, char *data_bits, frame_param &frame)
-      {
-	// first 16 bits are zero (SERVICE/DATA field)
-	//memset(data_bits, 0, 16);
-	//data_bits += 16;
-	for (int i = 0; i < 16; i++) {
-	  data_bits[i] = 0;
-	}
-	for(int i = 0; i < d_frame.psdu_size; i++) {
-	  for(int b = 0; b < 8; b++) {
-	    data_bits[16 + i * 8 + b] = !!(d_psdu[i] & (1 << b));
-	  }
-	}
+  //generate the WIFI data field, adding service field and pad bits
+  //     generate_bits(psdu, data_bits, frame);
+  //     void generate_bits(const char *psdu, char *data_bits, frame_param &frame)
+  {
+    // first 16 bits are zero (SERVICE/DATA field)
+    //memset(data_bits, 0, 16);
+    //data_bits += 16;
+    for (int i = 0; i < 16; i++) {
+      data_bits[i] = 0;
+    }
+    for(int i = 0; i < d_frame.psdu_size; i++) {
+      for(int b = 0; b < 8; b++) {
+	data_bits[16 + i * 8 + b] = !!(d_psdu[i] & (1 << b));
       }
-      DEBUG({
-	  int di_row = 0;
-	  int symbols_len = d_frame.n_data_bits;
-	  printf("\ndata_bits out:\n%6u : ", di_row);
-	  for (int di = 0; di < symbols_len; di++) {
-	    printf("%1x", data_bits[di]);
-	    if ((di % 128) == 127) {
-	      di_row++;
-	      printf("\n%6u : ", di_row);
-	    } else if ((di % 8) == 7) {
-	      printf(" ");
-	    }
-	  }
-	  printf("\n\n");
-	});
-	
-      // scrambling
-      //     scramble(     data_bits, scrambled_data,              frame,      d_scrambler++);
-      //void scramble(const char *in, char *out,      frame_param &frame, char initial_state)
-      {
-	int state = d_scrambler++; // initial_state;
-	int feedback;
-      
-	for (int i = 0; i < d_frame.n_data_bits; i++) {
-	  feedback = (!!(state & 64)) ^ (!!(state & 8));
-	  scrambled_data[i] = feedback ^ data_bits[i];
-	  DEBUG(printf("  %u : state %u   feedback %u   data %u   scrambled %u\n", i, state, feedback, data_bits[i], scrambled_data[i]));
-	  state = ((state << 1) & 0x7e) | feedback;
-	}
-      }
-    
-      if(d_scrambler > 127) {
-	d_scrambler = 1;
-      }
-    
-      // reset tail bits
-      //reset_tail_bits(scrambled_data, frame);
-      //void reset_tail_bits(char *scrambled_data, frame_param &frame)
-      {
-	//memset(scrambled_data + d_frame.n_data_bits - d_frame.n_pad - 6, 0, 6 * sizeof(char));
-	for (int i = 0; i < 6; i++) {
-	  scrambled_data[d_frame.n_data_bits - d_frame.n_pad - 6 + i] = 0;
-	}
-      }
-      DEBUG({
-	  int di_row = 0;
-	  int symbols_len = d_frame.n_data_bits;
-	  printf("\nscrambled out:\n%6u : ", di_row);
-	  for (int di = 0; di < symbols_len; di++) {
-	    printf("%1x", scrambled_data[di]);
-	    if ((di % 128) == 127) {
-	      di_row++;
-	      printf("\n%6u : ", di_row);
-	    } else if ((di % 8) == 7) {
-	      printf(" ");
-	    }
-	  }
-	  printf("\n\n");
-	});
-	
-      // encoding
-      //convolutional_encoding(scrambled_data, encoded_data, frame);
-      //void convolutional_encoding(const char *in, char *out, frame_param &frame)
-      convolutional_encoding(scrambled_data, encoded_data, d_frame.n_data_bits);
-      /* { */
-      /* 	int state = 0; */
-      /* 	for(int i = 0; i < d_frame.n_data_bits; i++) { */
-      /* 	  assert(scrambled_data[i] == 0 || scrambled_data[i] == 1); */
-      /* 	  state = ((state << 1) & 0x7e) | scrambled_data[i]; */
-      /* 	  encoded_data[i * 2]     = ones_count(state & 0155) % 2; */
-      /* 	  encoded_data[i * 2 + 1] = ones_count(state & 0117) % 2; */
-      /* 	} */
-      /* } */
-      DEBUG({
-	  int di_row = 0;
-	  int symbols_len = d_frame.n_data_bits;
-	  printf("\nencoded out:\n%6u : ", di_row);
-	  for (int di = 0; di < symbols_len; di++) {
-	    printf("%1x", encoded_data[di]);
-	    if ((di % 128) == 127) {
-	      di_row++;
-	      printf("\n%6u : ", di_row);
-	    } else if ((di % 8) == 7) {
-	      printf(" ");
-	    }
-	  }
-	  printf("\n\n");
-	});
-    
-      // puncturing
-      //puncturing(encoded_data, punctured_data, frame, d_ofdm);
-      /**## TODO: I think we are only using BPSK_1_2 for now -- can hard-code that to avoid the SWITCH ##**/
-      /**   NOTE: If we use BPSK_1_2 then this just COPIES the data UNCHANGED -- so it is really a NOP **
-       //void puncturing(const char *in, char *out , frame_param *frame, ofdm_param *ofdm)
-       {
-       int mod;
-       int oidx = 0;
-       for (int i = 0; i < d_frame.n_data_bits * 2; i++) {
-       switch(d_ofdm.encoding) {
-       case BPSK_1_2:
-       case QPSK_1_2:
-       case QAM16_1_2:
-       punctured_data[oidx] = encoded_data[i];
-       oidx++;
-       break;
-	    
-       case QAM64_2_3:
-       if (i % 4 != 3) {
-       punctured_data[oidx] = encoded_data[i];
-       oidx++;
-       }
-       break;
-	    
-       case BPSK_3_4:
-       case QPSK_3_4:
-       case QAM16_3_4:
-       case QAM64_3_4:
-       mod = i % 6;
-       if (!(mod == 3 || mod == 4)) {
-       punctured_data[oidx] = encoded_data[i];
-       oidx++;
-       }
-       break;
-       defaut:
-       assert(false);
-       break;
-       }
-       }
-       }**/
-      // EFFECTIVELY: punctured_data = encoded_data
-      DEBUG({
-	  int di_row = 0;
-	  int symbols_len = d_frame.n_data_bits;
-	  printf("\npunctured out:\n%6u : ", di_row);
-	  for (int di = 0; di < symbols_len; di++) {
-	    printf("%1x", punctured_data[di]);
-	    if ((di % 128) == 127) {
-	      di_row++;
-	      printf("\n%6u : ", di_row);
-	    } else if ((di % 8) == 7) {
-	      printf(" ");
-	    }
-	  }
-	  printf("\n\n");
-	});
-	
-      //std::cout << "punctured" << std::endl;
-      // interleaving
-      //interleave(punctured_data, interleaved_data, frame, d_ofdm);
-      interleave(punctured_data, interleaved_data, d_frame.n_sym, d_ofdm.n_cbps, d_ofdm.n_bpsc, false);
-      /* //std::cout << "interleaved" << std::endl; */
-      DEBUG({
-	  int di_row = 0;
-	  int symbols_len = d_frame.n_sym * 48; // 24528
-	  printf("\ninterleaved out:\n%6u : ", di_row);
-	  for (int di = 0; di < symbols_len; di++) {
-	    printf("%1x", interleaved_data[di]);
-	    if ((di % 128) == 127) {
-	      di_row++;
-	      printf("\n%6u : ", di_row);
-	    } else if ((di % 8) == 7) {
-	      printf(" ");
-	    }
-	  }
-	  printf("\n\n");
-	});
-
-      // one byte per symbol
-      //split_symbols(interleaved_data, symbols, frame, d_ofdm);
-      //void split_symbols(const char *in, char *out, frame_param &frame, ofdm_param &ofdm)
-      {
-	int n_symbols = d_frame.n_sym * 48;
-	int idx = 0;
-	for (int i = 0; i < n_symbols; i++) {
-	  symbols[i] = 0;
-	  for(int k = 0; k < d_ofdm.n_bpsc; k++) {
-	    assert(interleaved_data[idx] == 1 || interleaved_data[idx] == 0);
-	    symbols[i] |= (interleaved_data[idx] << k);
-	    idx++;
-	  }
-	}
-      }
-	  
-      d_symbols_len = d_frame.n_sym * 48; // 24528
-      //assert(d_symbols_len == 24528);
-      DEBUG(printf("d_symbols_len = %u * 48 = %u\n", d_frame.n_sym, d_symbols_len); fflush(stdout));
-
-      	  
-      /* d_symbols = (char*)calloc(d_symbols_len, 1); */
-      /* std::memcpy(d_symbols, symbols, d_symbols_len); */
-      for (int di = 0; di < d_symbols_len; di++) {
-	d_symbols[di] = symbols[di];
-      }
-      //printf("d_symbols_len = %u * 48 = %u\n", d_frame.n_sym, d_symbols_len); fflush(stdout);
-      DEBUG({
-	  int di_row = 0;
-	  printf("\nd_symbols out:\n%6u : ", di_row);
-	  for (int di = 0; di < d_symbols_len; di++) {
-	    printf("%1x", d_symbols[di]);
-	    if ((di % 128) == 127) {
-	      di_row++;
-	      printf("\n%6u : ", di_row);
-	    } else if ((di % 8) == 7) {
-	      printf(" ");
-	    }
-	  }
-	  printf("\n\n");
-	});
-	
-      // add tags
-      /* pmt::pmt_t key = pmt::string_to_symbol("packet_len"); */
-      /* pmt::pmt_t value = pmt::from_long(d_symbols_len); */
-      /* pmt::pmt_t srcid = pmt::string_to_symbol(alias()); */
-      /* add_item_tag(0, nitems_written(0), key, value, srcid); */
-	  
-      /* pmt::pmt_t psdu_bytes = pmt::from_long(psdu_length); */
-      /* add_item_tag(0, nitems_written(0), pmt::mp("psdu_len"), */
-      /* 		psdu_bytes, srcid); */
-	  
-      /* pmt::pmt_t encoding = pmt::from_long(d_ofdm.encoding); */
-      /* add_item_tag(0, nitems_written(0), pmt::mp("encoding"), */
-      /* 		encoding, srcid); */
-	  
-	  
-      /* free(data_bits); */
-      /* free(scrambled_data); */
-      /* free(encoded_data); */
-      /* free(punctured_data); */
-      /* free(interleaved_data); */
-      /* free(symbols); */
-	  
-      break;
     }
   }
+  DEBUG({
+      int di_row = 0;
+      int symbols_len = d_frame.n_data_bits;
+      printf("\ndata_bits out:\n%6u : ", di_row);
+      for (int di = 0; di < symbols_len; di++) {
+	printf("%1x", data_bits[di]);
+	if ((di % 128) == 127) {
+	  di_row++;
+	  printf("\n%6u : ", di_row);
+	} else if ((di % 8) == 7) {
+	  printf(" ");
+	}
+      }
+      printf("\n\n");
+    });
+	
+  // scrambling
+  //     scramble(     data_bits, scrambled_data,              frame,      d_scrambler++);
+  //     void scramble(const char *in, char *out,      frame_param &frame, char initial_state)
+  {
+    int state = d_scrambler++; // initial_state;
+    int feedback;
+      
+    for (int i = 0; i < d_frame.n_data_bits; i++) {
+      feedback = (!!(state & 64)) ^ (!!(state & 8));
+      scrambled_data[i] = feedback ^ data_bits[i];
+      DEBUG(printf("  %u : state %u   feedback %u   data %u   scrambled %u\n", i, state, feedback, data_bits[i], scrambled_data[i]));
+      state = ((state << 1) & 0x7e) | feedback;
+    }
+  }
+    
+  if(d_scrambler > 127) {
+    d_scrambler = 1;
+  }
+    
+  // reset tail bits
+  //     reset_tail_bits(scrambled_data, frame);
+  //     void reset_tail_bits(char *scrambled_data, frame_param &frame)
+  {
+    //memset(scrambled_data + d_frame.n_data_bits - d_frame.n_pad - 6, 0, 6 * sizeof(char));
+    for (int i = 0; i < 6; i++) {
+      scrambled_data[d_frame.n_data_bits - d_frame.n_pad - 6 + i] = 0;
+    }
+  }
+  DEBUG({
+      int di_row = 0;
+      int symbols_len = d_frame.n_data_bits;
+      printf("\nscrambled out:\n%6u : ", di_row);
+      for (int di = 0; di < symbols_len; di++) {
+	printf("%1x", scrambled_data[di]);
+	if ((di % 128) == 127) {
+	  di_row++;
+	  printf("\n%6u : ", di_row);
+	} else if ((di % 8) == 7) {
+	  printf(" ");
+	}
+      }
+      printf("\n\n");
+    });
+	
+  // encoding
+  //     convolutional_encoding(scrambled_data, encoded_data, frame);
+  //     void convolutional_encoding(const char *in, char *out, frame_param &frame)
+  convolutional_encoding(scrambled_data, encoded_data, d_frame.n_data_bits);
+  /* { */
+  /* 	int state = 0; */
+  /* 	for(int i = 0; i < d_frame.n_data_bits; i++) { */
+  /* 	  assert(scrambled_data[i] == 0 || scrambled_data[i] == 1); */
+  /* 	  state = ((state << 1) & 0x7e) | scrambled_data[i]; */
+  /* 	  encoded_data[i * 2]     = ones_count(state & 0155) % 2; */
+  /* 	  encoded_data[i * 2 + 1] = ones_count(state & 0117) % 2; */
+  /* 	} */
+  /* } */
+  DEBUG({
+      int di_row = 0;
+      int symbols_len = d_frame.n_data_bits;
+      printf("\nencoded out:\n%6u : ", di_row);
+      for (int di = 0; di < symbols_len; di++) {
+	printf("%1x", encoded_data[di]);
+	if ((di % 128) == 127) {
+	  di_row++;
+	  printf("\n%6u : ", di_row);
+	} else if ((di % 8) == 7) {
+	  printf(" ");
+	}
+      }
+      printf("\n\n");
+    });
+    
+  // puncturing
+  //puncturing(encoded_data, punctured_data, frame, d_ofdm);
+  /**## TODO: I think we are only using BPSK_1_2 for now -- can hard-code that to avoid the SWITCH ##**/
+  /**   NOTE: If we use BPSK_1_2 then this just COPIES the data UNCHANGED -- so it is really a NOP **
+   //void puncturing(const char *in, char *out , frame_param *frame, ofdm_param *ofdm)
+   {
+   int mod;
+   int oidx = 0;
+   for (int i = 0; i < d_frame.n_data_bits * 2; i++) {
+   switch(d_ofdm.encoding) {
+   case BPSK_1_2:
+   case QPSK_1_2:
+   case QAM16_1_2:
+   punctured_data[oidx] = encoded_data[i];
+   oidx++;
+   break;
+	    
+   case QAM64_2_3:
+   if (i % 4 != 3) {
+   punctured_data[oidx] = encoded_data[i];
+   oidx++;
+   }
+   break;
+	    
+   case BPSK_3_4:
+   case QPSK_3_4:
+   case QAM16_3_4:
+   case QAM64_3_4:
+   mod = i % 6;
+   if (!(mod == 3 || mod == 4)) {
+   punctured_data[oidx] = encoded_data[i];
+   oidx++;
+   }
+   break;
+   defaut:
+   assert(false);
+   break;
+   }
+   }
+   }**/
+  // EFFECTIVELY: punctured_data = encoded_data
+  DEBUG({
+      int di_row = 0;
+      int symbols_len = d_frame.n_data_bits;
+      printf("\npunctured out:\n%6u : ", di_row);
+      for (int di = 0; di < symbols_len; di++) {
+	printf("%1x", punctured_data[di]);
+	if ((di % 128) == 127) {
+	  di_row++;
+	  printf("\n%6u : ", di_row);
+	} else if ((di % 8) == 7) {
+	  printf(" ");
+	}
+      }
+      printf("\n\n");
+    });
+	
+  //std::cout << "punctured" << std::endl;
+  // interleaving
+  //     interleave(punctured_data, interleaved_data, frame, d_ofdm);
+  interleave(punctured_data, interleaved_data, d_frame.n_sym, d_ofdm.n_cbps, d_ofdm.n_bpsc, false);
+  /* //std::cout << "interleaved" << std::endl; */
+  DEBUG({
+      int di_row = 0;
+      int symbols_len = d_frame.n_sym * 48; // 24528
+      printf("\ninterleaved out:\n%6u : ", di_row);
+      for (int di = 0; di < symbols_len; di++) {
+	printf("%1x", interleaved_data[di]);
+	if ((di % 128) == 127) {
+	  di_row++;
+	  printf("\n%6u : ", di_row);
+	} else if ((di % 8) == 7) {
+	  printf(" ");
+	}
+      }
+      printf("\n\n");
+    });
 
-  //int i = std::min(noutput, d_symbols_len - d_symbols_offset);
-  //printf("compute i = %u < (%u - %u) [%u]\n", noutput, d_symbols_len, d_symbols_offset, (d_symbols_len - d_symbols_offset));
-  //int i = (noutput < (d_symbols_len - d_symbols_offset)) ? noutput : (d_symbols_len - d_symbols_offset);
+  // one byte per symbol
+  //     split_symbols(interleaved_data, symbols, frame, d_ofdm);
+  //     void split_symbols(const char *in, char *out, frame_param &frame, ofdm_param &ofdm)
+  {
+    int n_symbols = d_frame.n_sym * 48;
+    int idx = 0;
+    for (int i = 0; i < n_symbols; i++) {
+      symbols[i] = 0;
+      for(int k = 0; k < d_ofdm.n_bpsc; k++) {
+	assert(interleaved_data[idx] == 1 || interleaved_data[idx] == 0);
+	symbols[i] |= (interleaved_data[idx] << k);
+	idx++;
+      }
+    }
+  }
+	  
+  d_symbols_len = d_frame.n_sym * 48; // 24528
+  //assert(d_symbols_len == 24528);
+  DEBUG(printf("d_symbols_len = %u * 48 = %u\n", d_frame.n_sym, d_symbols_len); fflush(stdout));
+
+      	  
+  /* d_symbols = (char*)calloc(d_symbols_len, 1); */
+  /* std::memcpy(d_symbols, symbols, d_symbols_len); */
+  for (int di = 0; di < d_symbols_len; di++) {
+    d_symbols[di] = symbols[di];
+  }
+  //printf("d_symbols_len = %u * 48 = %u\n", d_frame.n_sym, d_symbols_len); fflush(stdout);
+  DEBUG({
+      int di_row = 0;
+      printf("\nd_symbols out:\n%6u : ", di_row);
+      for (int di = 0; di < d_symbols_len; di++) {
+	printf("%1x", d_symbols[di]);
+	if ((di % 128) == 127) {
+	  di_row++;
+	  printf("\n%6u : ", di_row);
+	} else if ((di % 8) == 7) {
+	  printf(" ");
+	}
+      }
+      printf("\n\n");
+    });
+
+      
   int i = d_symbols_len - d_symbols_offset;
-  /**## TODO : Figure out what this is really doing and how to re-create the effect ##**
-   **          I think I could just use d_symbols and the known offset (as a starting point) ?
-   std::memcpy(out, d_symbols + d_symbols_offset, i);
-  **/
-  DEBUG(printf("output i = %u :  d_sym = %p and d_sym_off = %u\n", i, d_symbols, d_symbols_offset));
+  DEBUG(printf("output i = %u :  d_sym = %p and d_sym_off = %u\n", i, (void*)d_symbols, d_symbols_offset));
   for (int di = 0; di < i; di++) {
     d_map_out[di] = d_symbols[d_symbols_offset + di];
     DEBUG(if (di < 16) { printf("%2u : d_map_out[%2u] = %1x : d_symbols[%2u] = %1x\n", i, di, d_map_out[di], (d_symbols_offset + di), d_symbols[d_symbols_offset + di]); });
@@ -636,8 +577,6 @@ int do_mapper_work(int psdu_length) // int noutput, gr_vector_int& ninput_items,
   if(d_symbols_offset == d_symbols_len) {
     d_symbols_offset = 0;
     DEBUG(printf("reset d_symbols_offset to 0\n"));
-    //free(d_symbols);
-    //d_symbols = 0;
   }
 
   DEBUG({
@@ -693,6 +632,7 @@ uint32_t popCount(uint32_t x)
   return ((r + (r >> 3)) & 030707070707) % 63;
 }
 
+// NOTE: This routine is not used!
 void init_d_scramble_mask(uint32_t mask, uint32_t seed, uint32_t reg_len)
 {
   d_mask = mask;
@@ -702,7 +642,7 @@ void init_d_scramble_mask(uint32_t mask, uint32_t seed, uint32_t reg_len)
   //d_scramble_mask(d_header_len, 0)
   // Init scrambler mask
 #if(0)
-  if (scramble_header) { // I Think this is always true or false for use -- probably TR
+  if (scramble_header) { // I Think this is always true or false for us -- probably TR
     // These are just random values which already have OK PAPR:
     // gr::digital::lfsr shift_reg(0x8a, 0x6f, 7); :: ~/gnuradio/gnuradio-3.7.9.3/gr-digital/include/gnuradio/digital/lfsr.h
     /* Fibonacci Linear Feedback Shift Register using specified polynomial mask
@@ -748,26 +688,7 @@ void init_d_scramble_mask(uint32_t mask, uint32_t seed, uint32_t reg_len)
 }
 
 
-/**  WHAT IS d_crc_impl  ??
-     ../gr-digital/include/gnuradio/digital/packet_header_default.h
-     boost::crc_optimal<8, 0x07, 0xFF, 0x00, false, false>  d_crc_impl;
-
-     ../gr-digital/lib/crc32_bb_impl.h
-     boost::crc_optimal<32, 0x04C11DB7, 0xFFFFFFFF, 0xFFFFFFFF, true, true>    d_crc_impl;
-
-     ../gr-digital/lib/crc32_async_bb_impl.h
-     boost::crc_optimal<32, 0x04C11DB7, 0xFFFFFFFF, 0xFFFFFFFF, true, true> d_crc_impl;
-**/
-
-
 /* FROM dsrc/gr-ieee802-11/lib/signal_field.cc */
-
-//#include "signal_field_impl.h"
-
-/* #include "utils.h" */
-/* #include <gnuradio/digital/lfsr.h> */
-
-//using namespace gr::ieee802_11;
 
 int get_bit(int b, int i) {  // Is this really an efficient way to do this?
   return (b & (1 << i) ? 1 : 0); // This is one shift, one and, one compare, and a branch.
@@ -880,21 +801,11 @@ bool signal_field_header_formatter(long packet_len, unsigned char *out) //, cons
 // From     int packet_headergenerator_bb_impl::work (int noutput_items,
 int do_packet_header_gen(unsigned int packet_len, uint8_t* out ) // int noutput_items, int ninput_items, uint8_t* input_items, uint8_t* output_items)
 {
-  /**
-   //## From packet_headergenerator_bb_impl::packet_headergenerator_bb_impl
-   // THIS ALL APPEARS TO BE FROM gnuradio/block.h AND NOT REALLY MATERIAL
-   set_output_multiple(d_formatter->header_len());   
-   // This is the worst case rate, because we don't know the true value, of course
-   set_relative_rate(d_formatter->header_len());
-   set_tag_propagation_policy(TPP_DONT);
-  **/
-  
   //## From     int packet_headergenerator_bb_impl::work (int noutput_items,
   //  NOTE: Need to know what type of header -- default or OFDM (?) as the
   //    OFDM header does a scramble pass after the default header setup.
   //    I'm pretty sure we are using OFDM here... BUT MAYBE NOT OFDM HEADERS?
   
-  //if (!d_formatter->header_formatter(ninput_items, output_items, input_items)) {
   signal_field_header_formatter(packet_len, out); // , const std::vector<tag_t> &tags)
   return 48; // this is the length of the output header -- the convolutional encoded and interleaved header...
 }
@@ -999,7 +910,8 @@ int do_packet_header_gen(unsigned int packet_len, uint8_t* out ) // int noutput_
 
 /** THIS code comes from gr-digital/ofdm_carrier_allocator_cvc_impl.cc **/
 
-#define d_fft_len  64
+#define d_fft_len   64
+#define d_fft_logn   6
   
 
 #define d_num_pilot_carriers       1
@@ -1308,7 +1220,7 @@ do_ofdm_carrier_allocator_cvc_impl_work (int noutput_items,
   // Reset the contents of the output_items to 0x00 (so any not over-written remain 0x00?)
   //memset((void *) out_real, 0x00, sizeof(float) * d_fft_len * noutput_items);
   //memset((void *) out_imag, 0x00, sizeof(float) * d_fft_len * noutput_items);
-  for (int ti = 0; ti < d_fft_len * noutput_items; ti++) {
+  for (int ti = 0; ti < d_fft_len * (noutput_items + d_num_sync_words); ti++) {
     out_real[ti] = 0.0;
     out_imag[ti] = 0.0;
   }
@@ -1385,70 +1297,30 @@ do_ofdm_carrier_allocator_cvc_impl_work (int noutput_items,
 
 
 
-/*******************************************************************************/
-/* This is a simple implementation of a DFT (Discrete Fourier Xform) which     */
-/* supports complex inputs (inreal, inimag) and complex outputs, as well       */
-/* as the inverse FFT operation.  Ths input n is the "size" (num samples).     */
-/* NOTES:                                                                      */
-//  This has been cast from double to float representation
-//  The code to support the "shift" options added
-/*******************************************************************************/
 
-#ifndef M_PI
-  #define M_PI 3.14159265358979323846
-#endif 
-
-static void simple_dft(const float *inreal, const float *inimag,
-		       float *outreal, float *outimag,
-		       bool inverse, bool shift, int n) {
-  
-  float coef = (inverse ? 2 : -2) * M_PI;
-  for (int k = 0; k < n; k++) {  // For each output element
-    float sumreal = 0;
-    float sumimag = 0;
-    for (int t = 0; t < n; t++) {  // For each input element
-      float angle = (coef * ((long long)t * k % n)) / n;
-      sumreal += inreal[t] * cos(angle) - inimag[t] * sin(angle);
-      sumimag += inreal[t] * sin(angle) + inimag[t] * cos(angle);
-    }
-    outreal[k] = sumreal;
-    outimag[k] = sumimag;
-  }
-
-  float swap_r, swap_i;
-  if (shift) {
-    /* shift: */
-    for(unsigned i = 0; i < (n/2); i++) {
-      swap_r = outreal[i];
-      swap_i = outimag[i];
-      outreal[i] = outreal[32+i];
-      outimag[i] = outimag[32+i];
-      outreal[32+i] = swap_r;
-      outimag[32+i] = swap_i;
-    }
-  }
-
-}
 
 
 void
-do_fft_work(int n_inputs, float scale, float *input_real, float * input_imag, float* output_real, float*output_imag)
+do_xmit_fft_work(int n_inputs, float scale, float *input_real, float * input_imag, float* output_real, float*output_imag)
 {
   // Do the FFT in 64-entry windows, and add the "shift" operation to each
   //   Also add the weighting/scaling for the window
   float fft_in_real[64];
   float fft_in_imag[64];
+#ifdef USE_SIMPLE_DFT
   float fft_out_real[64];
   float fft_out_imag[64];
+#endif
   bool inverse = true;
   bool shift = true;
   bool swap_odd_signs = false; // We shift the inputs instead?
   int  size = d_fft_len;
+  int  log_size = d_fft_logn;
   float recluster[2] = {1.0, 1.0}; // used to alter sign of "odd" fft results
   if (swap_odd_signs) {
     recluster[1] = -1.0;
   }
-  DEBUG(printf("Starting do_fft_work with size %u inverse %u shift %u on n_inputs %u\n", size, inverse, shift, n_inputs));
+  DEBUG(printf("Starting do_xmit_fft_work with size %u inverse %u shift %u on n_inputs %u\n", size, inverse, shift, n_inputs));
   for (int k = 0; k < (n_inputs+(size-1)); k += size) {
 
     DEBUG(printf(" Prepping for FFT call starting at %u\n", k));
@@ -1478,8 +1350,9 @@ do_fft_work(int n_inputs, float scale, float *input_real, float * input_imag, fl
 	for (int i = 0; i < size; i++) {
 	  printf("  FFT_%u_IN[ %2u ] = %11.8f * ( %11.8f + %11.8f i) = %11.8f + %11.8f i\n", k, i, scale, input_real[k+i], input_imag[k+i], fft_in_real[i], fft_in_imag[i]);
 	}
-	printf("\nCalling simple_dft with inverse = %u size = %u\n", inverse, size);
+	printf("\nCalling FFT function with inverse = %u size = %u\n", inverse, size);
       });
+#ifdef USE_SIMPLE_DFT
     simple_dft(fft_in_real, fft_in_imag, fft_out_real, fft_out_imag, inverse, false /*shift*/, size);
     for (int i = 0; i < size; i++) {
       // Swap sign on the "odd" FFT results (re-cluster energy around zero?)
@@ -1489,6 +1362,16 @@ do_fft_work(int n_inputs, float scale, float *input_real, float * input_imag, fl
       /*   printf(" FFT_%u_OUT[ %2u : %5u ] = %11.8f + %11.8f i\n", k, i, k+i, output_real[k+i], output_imag[k+i]); */
       /* }); */
     }
+#else
+    // NOTE: This version over-writes the input data with output data
+    fft(fft_in_real, fft_in_imag, inverse, false, size, log_size);
+    for (int i = 0; i < size; i++) {
+      // Swap sign on the "odd" FFT results (re-cluster energy around zero?)
+      output_real[k + i] = recluster[i&0x1]*fft_in_real[i];
+      output_imag[k + i] = recluster[i&0x1]*fft_in_imag[i];
+    }
+
+#endif
     DEBUG(if (k < 256) {
 	for (int i = 0; i < size; i++) {
 	  printf(" FFT_%u_OUT[ %2u : %5u ] = %11.8f + %11.8f i\n", k, i, k+i, output_real[k+i], output_imag[k+i]);
@@ -1600,7 +1483,8 @@ do_xmit_pipeline(int in_msg_len, char* in_msg, int* num_final_outs, float* final
 	printf("\n"); fflush(stdout));
   
   int psdu_len = 0;
-  do_wifi_mac(in_msg_len, in_msg, &psdu_len);
+  //do_wifi_mac(in_msg_len, in_msg, &psdu_len);
+  generate_mac_data_frame(in_msg, in_msg_len, &psdu_len);
 
   //do_mapper_work(32768, psdu_len); // noutput always seems to be 32768 ? Actualy data size is 24528 ?
   do_mapper_work(psdu_len); // noutput always seems to be 32768 ? Actualy data size is 24528 ?
@@ -1666,13 +1550,13 @@ do_xmit_pipeline(int in_msg_len, char* in_msg, int* num_final_outs, float* final
 
   // The FFT operation...  This is where we are currently "broken"
   //   The outputs match for the first one or two 64-entry windows, and then diverge a lot...
-  DEBUG(printf("\nCalling do_fft_work for %u data values\n", ofdm_max_out_size));
+  DEBUG(printf("\nCalling do_xmit_fft_work for %u data values\n", ofdm_max_out_size));
   int   n_ins = ofc_res * d_fft_len;  // max is ofdm_max_out_size
   float fft_out_real[ofdm_max_out_size];
   float fft_out_imag[ofdm_max_out_size];
   float scale = 1/sqrt(52.0);
 
-  do_fft_work(n_ins, scale, ofdm_car_str_real, ofdm_car_str_imag, fft_out_real, fft_out_imag);
+  do_xmit_fft_work(n_ins, scale, ofdm_car_str_real, ofdm_car_str_imag, fft_out_real, fft_out_imag);
   DEBUG(for (int i = 0; i < n_ins; i++) {
       printf(" fft_out %6u : %11.8f + %11.8f i\n", i, fft_out_real[i], fft_out_imag[i]);
     });

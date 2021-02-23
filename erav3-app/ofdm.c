@@ -2,12 +2,14 @@
 //#include <cmath>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
 
+/* #ifndef DEBUG_MODE */
+/*  #define DEBUG_MODE */
+/* #endif */
 #include "debug.h"
+
 #include "type.h"
 #include "base.h"
 #include "ofdm.h"
@@ -19,6 +21,11 @@
 // typedef complex< fx_pt1_ext2 > fx_pt_ext2;
 
 
+extern int d_frame_bytes;
+extern int d_frame_encoding;
+extern int d_frame_symbols;
+extern int d_frame_mod;
+
 void decode_signal( unsigned num_inputs, fx_pt constellation[DECODE_IN_SIZE_MAX], unsigned* num_outputs, uint8_t * output_data ) // hls::stream< ap_uint<1> > &output_data  )
 {
   // JDW : REPLACING ALL of this with our viterbi (library) version...
@@ -26,9 +33,9 @@ void decode_signal( unsigned num_inputs, fx_pt constellation[DECODE_IN_SIZE_MAX]
   // ap_uint<1> bit[CHUNK];
   unsigned num_sym = num_inputs/48;
   uint8_t bit_r[DECODE_IN_SIZE_MAX];
-  uint8_t bit[DECODE_IN_SIZE_MAX];
+  uint8_t bit[DECODE_IN_SIZE_MAX + OFDM_PAD_ENTRIES]; // This is oversize becuase decode uses extra space (?)
 
-  DEBUG(printf("In the decode_signal routine...\n"));
+  DEBUG(printf("In the decode_signal routine with num_inputs = %u\n", num_inputs));
   // map to the nearest one
   for(unsigned i = 0; i < num_inputs /*DECODE_IN_SIZE_MAX*/;i++) {
     if( crealf(constellation[i]) > 0 ) {
@@ -54,17 +61,21 @@ void decode_signal( unsigned num_inputs, fx_pt constellation[DECODE_IN_SIZE_MAX]
       DEBUG(printf(" OFDM_BIT %5u : BIT %5u = BIR_R %5u = %u\n", i, (j+i*48), index, bit[j+i*48]));
     }
   }
-
+  // Initialize the pad entries
+  for (int ti = 0; ti < OFDM_PAD_ENTRIES; ti++) {
+    bit[48*num_sym + ti] = 0;
+  }
+  
   DEBUG(printf("     at the call to our decode...\n"));
-  unsigned num_out_bits = num_inputs/2;
+  unsigned num_out_bits = num_inputs/2; // for BPSK_1_2
   {
-    ofdm_param ofdm = {   BPSK_1_2, //  encoding   : 0 = BPSK_1_2
+    ofdm_param ofdm = {   d_frame_encoding, //  encoding   : 0 = BPSK_1_2
 			  13,       //             : rate field of SIGNAL header //Taken constant
 			  1,        //  n_bpsc     : coded bits per subcarrier
 			  48,       //  n_cbps     : coded bits per OFDM symbol
 			  24 };     //  n_dbps     : data bits per OFDM symbol
 
-    frame_param frame = {  1528,     // psdu_size      : PSDU size in bytes
+    frame_param frame = {  d_frame_bytes, // 1528,     // psdu_size      : PSDU size in bytes
 			   (int)(num_sym),      // n_sym          : number of OFDM symbols
 			   18,       // n_pad          : number of padding bits in DATA field
 			   (int)num_inputs, // 24528,    // n_encoded_bits : number of encoded bits
@@ -72,7 +83,10 @@ void decode_signal( unsigned num_inputs, fx_pt constellation[DECODE_IN_SIZE_MAX]
     int n_res_char;
     DEBUG(printf("Calling decode with OFDM_PARMS %u %2u %u %2u %2u\n", ofdm.encoding, 13, ofdm.n_bpsc, ofdm.n_cbps, ofdm.n_dbps);
 	  printf("               and FRAME_PARMS %4u %3u %2u %5u %5u\n",  frame.psdu_size, frame.n_sym, frame.n_pad, frame.n_encoded_bits, frame.n_data_bits));
-    DEBUG(printf("Calling decode : n_inputs = %u \n", num_inputs));
+    /* DEBUG(printf("Calling decode : n_inputs = %u \n", num_inputs); */
+    /* 	  printf("OFDM : enc %u   rate %u  n_bpsc %u  n_cbps %u  n_dbps %u\n", ofdm.encoding, ofdm.rate_field, ofdm.n_bpsc, ofdm.n_cbps, ofdm.n_dbps); */
+    /* 	  printf("FRAME: psdu %u  n_sym %u  n_pad %u  n_encb %u  n_dtab %u\n", frame.psdu_size, frame.n_sym, frame.n_pad, frame.n_encoded_bits, frame.n_data_bits)); */
+    
     decode(&ofdm, &frame, bit /*input_data*/, &n_res_char, output_data);
     // end of decode (viterbi) function, but result bits need to be "descrambled"
     *num_outputs = num_out_bits;

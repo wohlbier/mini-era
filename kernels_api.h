@@ -36,8 +36,11 @@ typedef enum {error, success} status_t;
 #include "radar/calc_fmcw_dist.h"
 
 typedef struct {
-  unsigned int index;
-  unsigned int return_id;
+  unsigned int index;          // A global index (of all radar dictionary entries
+  unsigned int set;            // The set this entry is in
+  unsigned int index_in_set;   // The index in the set for this entry
+  unsigned int return_id;      // An entry-defined return ID 
+  unsigned int log_nsamples;
   float distance;
   float return_data[2 * MAX_RADAR_N];
 } radar_dict_entry_t;
@@ -51,6 +54,9 @@ typedef struct {
   uint8_t      in_bits[MAX_ENCODED_BITS];
 } vit_dict_entry_t;
 
+
+#define VITERBI_MSG_LENGTHS     4
+#define VITERBI_MSGS_PER_STEP   3
 
 /* These are GLOBAL and affect the underlying world, etc. */
 #define NUM_LANES     5
@@ -72,6 +78,11 @@ typedef struct {
 #define THRESHOLD_3 305.0
 
 #define VIT_CLEAR_THRESHOLD  THRESHOLD_1
+
+
+typedef struct {
+  unsigned int entry_id;
+} h264_dict_entry_t;
 
 
 /* Pre-defined labels used by the computer vision kernel */
@@ -123,7 +134,10 @@ extern char* lane_names[NUM_LANES];
 extern char* message_names[NUM_MESSAGES];
 extern char* object_names[NUM_OBJECTS];
 
-extern unsigned vit_msgs_behavior;
+extern unsigned vit_msgs_size;
+extern unsigned vit_msgs_per_step;
+extern const char* vit_msgs_size_str[VITERBI_MSG_LENGTHS];
+extern const char* vit_msgs_per_step_str[VITERBI_MSGS_PER_STEP];
 
 extern unsigned total_obj; // Total non-'N' obstacle objects across all lanes this time step
 extern unsigned obj_in_lane[NUM_LANES]; // Number of obstacle objects in each lane this time step (at least one, 'n')
@@ -137,6 +151,11 @@ extern unsigned hist_total_objs[NUM_LANES * MAX_OBJ_IN_LANE];
 
 extern unsigned rand_seed;
 
+#define MAX_RDICT_SAMPLE_SETS   4   // This should be updated eventually...
+extern unsigned int num_radar_samples_sets;
+extern unsigned int crit_fft_samples_set;
+extern unsigned int radar_log_nsamples_per_dict_set[MAX_RDICT_SAMPLE_SETS];
+
 /* Input Trace Functions */
 status_t init_trace_reader(char * tr_fn);
 bool_t eof_trace_reader(void);
@@ -147,16 +166,20 @@ void closeout_trace_reader(void);
 status_t init_cv_kernel(char* py_file, char* dict_fn);
 status_t init_rad_kernel(char* dict_fn);
 status_t init_vit_kernel(char* dict_fn);
+status_t init_h264_kernel(char* dict_fn);
 
+h264_dict_entry_t* iterate_h264_kernel(vehicle_state_t vs);
+void      execute_h264_kernel(h264_dict_entry_t* hdep, char* frame_ptr);
+void      post_execute_h264_kernel();
 
 label_t run_object_classification(unsigned tr_val);
 label_t iterate_cv_kernel(vehicle_state_t vs);
-label_t execute_cv_kernel(label_t in_tr_val);
+label_t execute_cv_kernel(label_t in_tr_val, char* found_frame_ptr);
 void    post_execute_cv_kernel(label_t tr_val, label_t d_object);
 
 radar_dict_entry_t* iterate_rad_kernel(vehicle_state_t vs);
 distance_t execute_rad_kernel(float * inputs);
-void       post_execute_rad_kernel(unsigned index, distance_t tr_dist, distance_t dist);
+void       post_execute_rad_kernel(unsigned set, unsigned index, distance_t tr_dist, distance_t dist);
 
 vit_dict_entry_t* iterate_vit_kernel(vehicle_state_t vs);
 message_t execute_vit_kernel(vit_dict_entry_t* trace_msg, int num_msgs);
@@ -167,6 +190,7 @@ vehicle_state_t plan_and_control(label_t, distance_t, message_t, vehicle_state_t
 
 // These routines are used for any finalk, end-of-run operations/output
 void closeout_cv_kernel(void);
+void closeout_h264_kernel(void);
 void closeout_rad_kernel(void);
 void closeout_vit_kernel(void);
 

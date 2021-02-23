@@ -17,7 +17,21 @@ docker run -v /DATA/SDH/packages/arm:/arm -v $(pwd)/log:/workspace/mini-era/log 
 
 This is a top-level driver for the Mini-ERA workload.
 
-## Requirements
+The Mini-ERA serves as a simplified but still representative workload for Colaborative Autonomous Vehicles, intended to drive the
+EPOCHS full system design and development methodology in lieu of the full ERA workload.  As such, Mini-ERA is under continuous
+development and extension.
+
+Currently, Mini-ERA contains a number of kernels, and a decision module (used to update the autonomous vehicle's state).
+The main kernels modules currently implemented are:
+ - The "Radar" kernel, used to model the radar range-finding to the nearest obstacle in a given lane (usually the lane in which the autonomous vehicle is travelling)
+ - The Viterbi Decoder kernel, which is used to decode messages received (presumably via Wi-Fi connection of some sort)
+ - An H264 decoder, used to decode the input frames from the onboard camera in order to send them through the CV/CNN module
+ - The CV/CNN (Computer Vision Object Recognition and Labeling) Module, which identifies the type of obstacle in a given lane, and
+
+Recall that Min-ERA is a simplified representative workload set, so the code expresses the proper functionality for the kernels,
+but does not implement a truly functional, full autonomous driving system; that is the domain of the larger ERA workload.
+
+## System Requirements
 
 Mini-ERA has been successfully built and executed using the following set-up:
  - Ubuntu 18.04
@@ -55,16 +69,26 @@ The ```make allclean``` is added just for surety that all code is re-built, i.e.
 ./main.exe -h
 Usage: ./main.exe <OPTIONS>
  OPTIONS:
-    -h         : print this helpfule usage info
+    -h         : print this helpful usage info
     -o         : print the Visualizer output traace information during the run
-    -t <trace> : defines the input trace file to use
-    -v <N>     : defines Viterbi messaging behavior:
-               :      0 = One short message per time step
-               :      1 = One long  message per time step
-               :      2 = One short message per obstacle per time step
-               :      3 = One long  message per obstacle per time step
-               :      4 = One short msg per obstacle + 1 per time step
-               :      5 = One long  msg per obstacle + 1 per time step
+    -R <file>  : defines the input Radar dictionary file <file> to use
+    -V <file>  : defines the input Viterbi dictionary file <file> to use
+    -C <file>  : defines the input CV/CNN dictionary file <file> to use
+    -H <file>  : defines the input H264 dictionary file <file> to use
+    -b         : Bypass (do not use) the H264 functions in this run.
+    -t <trace> : defines the input trace file <trace> to use
+    -p <N>     : defines the plan-and-control repeat factor (calls per time step -- default is 1)
+    -f <N>     : defines which Radar Dictionary Set is used for Critical FFT Tasks
+               :      Each Set of Radar Dictionary Entries Can use a different sample size, etc.
+    -n <N>     : defines number of Viterbi messages per time step behavior:
+               :      0 = One message per time step
+               :      1 = One message per obstacle per time step
+               :      2 = One msg per obstacle + 1 per time step
+    -v <N>     : defines Viterbi message size:
+               :      0 = Short messages (4 characters)
+               :      1 = Medium messages (500 characters)
+               :      2 = Long messages (1000 characters)
+               :      3 = Max-sized messages (1500 characters)
 ```
 
 #### Other Targets
@@ -73,25 +97,41 @@ Mini-ERA also supports a number of other targets.  One can build these individua
 ```
 make all
 ```
+If one is compiling on a system that does not include the full support for the CV/CNN (Keras, Tensorflow) model, then
+one can restrict the build to only produce the Mini-ERA executables that do not utilize those resources.  This is referred to as
+the C-subset, or the C-version Mini-ERA (as it does not includethe other languages used in defining the CNN model, etc.).  To build
+this set of Mini-ERA executables, the easiest method is to build the "cver" target:
+``` make cver
+```
 
-The primary update is that Mini-ERA now supports two modes of execution:
+
+Mini-ERA supports two modes of execution:
  - a trace-driven mode (the "classic" mode) where the simulation is driven by an input trace of obstacle positions per simulation time step
  - a new, developing mode which uses on-board environment simulation to both introduce new obstacle vehicles and track the positions, etc. during simulation
 This new simulation version is developed from the trace generation utility, and provides a greater range of behaviors to the autonomous vehicle ("red car") during a Mini-ERA run.
 
-The ```make all``` command should compile a number of targets:
+The ```make all``` command should compile a number of targets, including:
  - The default, trace-driven Mini-ERA:
    - main.exe : the trace-driven Mini-ERA
    - vmain.exe : trace-driven Mini-ERA in "verbose" mode (includes debug output)
  - The trace-driven Mini-ERA with no use of Keras/Python code:
    - cmain.exe : the trace-driven Mini-ERA with no use of Keras/Python code
-   - vcmain.exe : the trace-driven Mini-ERA in "verbose" mode, with no use of Keras/Python code
+   - fcmain.exe : the trace-driven Mini-ERA with no use of Keras/Python code and using hte "viterbi_flat" Viterbi implementation
+   - gp_cmain.exe : the trace-driven Mini-ERA without CNN, and set up for ```gprof``` profiling
+   - it-cmain.exe : the cmain.exe Mini-ERA with support for timing the execution of various elements (and report the timing)
+   - it-fcmain.exe : the fcmain.exe Mini-ERA with support for timing the execution of various elements (and report the timing)
+   - vcmain.exe : the trace-driven cmain.exe Mini-ERA in "verbose" mode, with no use of Keras/Python code
+   - vfcmain.exe : the trace-driven fcmain.exe Mini-ERA in "verbose" mode, with no use of Keras/Python code
  - The default, trace-driven Mini-ERA:
    - sim_main.exe : the base Mini-ERA code running in a simulation (not trace-driven) mode
    - vsim_main.exe : the simulation-mode Mini-ERA in "verbose" mode (includes debug output)
  - The default, trace-driven Mini-ERA:
    - csim_main.exe : the simulation-mode Mini-ERA with no use of Keras/Python code
+   - fcsim_main.exe : the simulation-mode Mini-ERA with no use of Keras/Python code, using the "viterbi_flat" Viterbi code
+   - it-csim_main.exe : the csim_main.exe Mini-ERA with support for timing the execution of various elements (and report the timing)
+   - it-fcsim_main.exe : the fcsim_main.exe Mini-ERA with support for timing the execution of various elements (and report the timing)
    - vcsim_main.exe : the simulation-mode Mini-ERA in "verbose" mode, with no use of Keras/Python code
+   - vfcsim_main.exe : the simulation-mode Mini-ERA in "verbose" mode, with no use of Keras/Python code, using the "viterbi_flat" Viterbi code
 
 ### Execution (Example)
 The usage for the trace-driven Mini-ERA and simulation-mode Mini-ERA differ slightly.  Here we will give two examples, one for each mode.
@@ -106,23 +146,6 @@ Trace-driven Mini-era requires the specification of the input trace (using -t <t
 
 By using the -v <N> behavior controls, one can simulate the Viterbi messaging work that could load the system when either operating with a single global (environmental) messsage model, with a pure swarm collaboration model (where each other nearby vehicle sends a message) and in a hybrid that includes both kinds of messaging.  The message length also allows one to consider the effect of larger and small message payload decoding on the overall Viterbi run-time impact.
 
-Recall that the usage is:
-```
-./main.exe -h
-Usage: ./cmain.exe <OPTIONS>
- OPTIONS:
-    -h         : print this helpfule usage info
-    -o         : print the Visualizer output traace information during the run
-    -t <trace> : defines the input trace file <trace> to use
-    -v <N>     : defines Viterbi messaging behavior:
-               :      0 = One short message per time step
-               :      1 = One long  message per time step
-               :      2 = One short message per obstacle per time step
-               :      3 = One long  message per obstacle per time step
-               :      4 = One short msg per obstacle + 1 per time step
-               :      5 = One long  msg per obstacle + 1 per time step
-```
-
 
 #### Simulation Mode:
 
@@ -132,25 +155,33 @@ Trace-driven Mini-era requires the specification of the input trace (using -t <t
 ./sim_main.exe
 ```
 
-
 The simulation-mode usage is:
 ```
-./csim_main.exe -h
 Usage: ./csim_main.exe <OPTIONS>
  OPTIONS:
-    -h         : print this helpfule usage info
+    -h         : print this helpful usage info
     -o         : print the Visualizer output traace information during the run
+    -R <file>  : defines the input Radar dictionary file <file> to use
+    -V <file>  : defines the input Viterbi dictionary file <file> to use
+    -C <file>  : defines the input CV/CNN dictionary file <file> to use
+    -H <file>  : defines the input H264 dictionary file <file> to use
+    -b         : Bypass (do not use) the H264 functions in this run.
     -s <N>     : Sets the max number of time steps to simulate
     -r <N>     : Sets the rand random number seed to N
-    -A         : Allow obstacle vehicles in All lanes (otherwise not in left or right hazard lanes)
+    -A         : Allow obstacle vehciles in All lanes (otherwise not in left or right hazard lanes)
     -W <wfile> : defines the world environment parameters description file <wfile> to use
-    -v <N>     : defines Viterbi messaging behavior:
-               :      0 = One short message per time step
-               :      1 = One long  message per time step
-               :      2 = One short message per obstacle per time step
-               :      3 = One long  message per obstacle per time step
-               :      4 = One short msg per obstacle + 1 per time step
-               :      5 = One long  msg per obstacle + 1 per time step
+    -p <N>     : defines the plan-and-control repeat factor (calls per time step -- default is 1)
+    -f <N>     : defines which Radar Dictionary Set is used for Critical FFT Tasks
+               :      Each Set of Radar Dictionary Entries Can use a different sample size, etc.
+    -n <N>     : defines number of Viterbi messages per time step behavior:
+               :      0 = One message per time step
+               :      1 = One message per obstacle per time step
+               :      2 = One msg per obstacle + 1 per time step
+    -v <N>     : defines Viterbi message size:
+               :      0 = Short messages (4 characters)
+               :      1 = Medium messages (500 characters)
+               :      2 = Long messages (1000 characters)
+               :      3 = Max-sized messages (1500 characters)
 ```
 
 Note that in simulation mode, there is no option to specify a trace (the '-t' of trace-mode) as there is no need for or use of a trace.  There are four additional options in simulation-mode: the '-s' which indicates the number of time steps to simulate (which is analogous to the trace length) and '-r' which sets the seed value (and unsigned int) for the C ```rand()``` function used in the simulation.  Both modes support the '-v' and '-o' options.
@@ -159,17 +190,52 @@ In the Simulation mode there is also a `-A` option, which allows the simulation 
 
 Finally, there is the '-W' options which allows one to specify a "World Description File" which is used to define various parameters of the simulation used to decide elements like the probability of new obstacle vehicle arriving, their speeds, etc.  See the detailed description below.
 
+### Parameter Dependence
+
+The usage defines sets of command-line options, but there are some usage restrictions and comditions that must hold
+in order to define a legal (i.e. functionally correct) execution. These are detialed here.
+
+#### FFT Samples and FFT Dictionary
+
+Mini-ERA defaults currenlty to a 16k-sample FFT, and to the ```traces/norm_radar_16k_dictionary.dfn``` radar dictionary file.
+There are some additional radar dictionary files provided in the ```traces``` directory.  One of these contains multiple
+complete Radar input sets, one for 1k-sample sand one for 16k-samples in the same dictionary (the ```norm_radar_all_dictionary.dfn```).
+One can use this input dictionary, and then use the ```-f``` option to select input set 0 or 1
+(where set 0 is the 1k-sample inputs and set 1 is the 16k-sample inputs).  Specification of an input parametere
+value for ```-f``` which exceeds the number of sets in the dictionary file results in an error report.
+
+The radar dictionary files and their descriptions:
+ - ```norm_radar_16k_dictionary.dfn``` defines normalized inputs, etc. for a 16k-sample FFT
+ - ```norm_radar_01k_dictionary.dfn``` defines normalized inputs, etc. for a  1k-sample FFT
+ - ```norm_radar_all_dictionary.dfn``` defines normalized inputs, etc. for a 1k-sample FFT set followed by a 16k-sample FFT
+
+Thus, legal combinations of the ```-f``` and ```-R``` options are:
+ - ```-f 0 -R traces/norm_radar_16k_dictionary``` which is 16k normalized samples
+ - ```-f 0 -R traces/norm_radar_01k_dictionary``` which is  1k normalized samples
+ - ```-f 0 -R traces/norm_radar_all_dictionary``` which selects the  1k normalized samples set
+ - ```-f 1 -R traces/norm_radar_all_dictionary``` which selects the 16k normalized samples set
+
+
 ## Status
 
 The trace version currently uses an input trace to drive the Mini-ERA behaviors, and the computer-vision, Viterbi and radar ranging functionality in the underlying kernels. There are some example traces in the ```traces``` subdirectory.
  - ```test_trace1.new``` is a short trace (117 time steps) that illustrates the funciton of the Mini-ERA, is readable ASCII code, and fairly simple.
  - ```test_trace2.new``` is a slightly longer (1000 time steps) simple illustrative trace
  - ```tt00.new``` is a 5000 record illustrative trace
- - ```tt001new``` is a 5000 record illustrative trace
- - ```tt002new``` is a 5000 record trace that includes multiple obstacle vehicles per lane (at times)
- - ```tt003new``` is a 5000 record trace that includes multiple obstacle vehicles per lane (at times)
+ - ```tt01.new``` is a 5000 record illustrative trace
+ - ```tt02.new``` is a 5000 record trace that includes multiple obstacle vehicles per lane (at times)
+ - ```tt03.new``` is a 5000 record trace that includes multiple obstacle vehicles per lane (at times)
 
-There are also a collection of dictionary files (e.g. ```radar_dictionary.dfn```) in the ```traces``` subdirectory, which are used by the kernels to drive the proper kernel inputs given the desired inputs from the Mini-ERA environment.
+There is an example trace (`test_trace.new`) to illustrate the function of the Mini-ERA, and a collection of dictionary files (e.g. `radar_dictionary.dfn`) which are used by the kernels in conjunction with the input trace to drive the proper kernel inputs (in response to the trace inputs).
+
+Notes that all these traces are simple ASCII format, with one time step per line in the file.  One can create a sset trace
+by taking the initial N lines of the file, e.g. to create a 500-time-step version of tt02.new one could use:
+
+```
+     head -n 500 traces/tt02.new > traces/tt02_0500.new
+```
+
+Currently our primary trace for analysis, testing, demos, etc. has been tt02.new (or a 100 or 500 time-step some sub-trace of that trace).
 
 
 ### Trace Format
@@ -203,8 +269,10 @@ In this implementation, the objects include:
   N - nothing
 ```
 
-In concert, the distances currently implemented are values between 0 and 550 and represent some currently unspecified unit of distance (thoguh in truth they correspond to the radar kernel's distance measures, which span roughly zero to 500 meters, and 550 represents "infinitely far away" or "no obstale detected").
-The following image illustrates how a specific scenario at a given point in time is encoded in a trace entry, assuming we are using 50-metere steps of distance (though in fact the trace currently can contain arbitrary unsigned integer values for distance; these are converted to 50-meter "buckets" (i.e. ```floor(dist/50)``` when determining the radar input).:
+In concert, the distances currently implemented are values between 0 and 550 and represent some currently unspecified unit of distance (though in truth they correspond to the radar kernel's distance measures, which span roughly zero to 500 meters, where 550 represents "infinitely far away" or "no obstale detected").
+The actual radar inputs (dictionary values) are currently "bucketized" into 50-unit increments, therefore the rada will report distances of 0, 50, 100, 150, ..., 500 or 550 (infinite) for any detected objects.
+The following image illustrates how a specific scenario at a given point in time is could be encoded in a trace entry, assuming we are using 50-metere steps of distance (though the trace currently can specify non bucketized distances, e.g. 97, and these are
+converted to the equivalent (currently 50-meter) bucket at run time (e.g. by using ```floor(dist/50)```) when selecting the effective radar input.:
 
 ```
   Distance| Left | Cntr | Right|
@@ -261,10 +329,10 @@ For each dictionary entry:
 
 ```
 4   	              - There are 4 messages in the dictionary
-1 48 24 0 13  	    - The OFDM paramteers for the first message (which is "Msg0")
+1 48 24 0 13  	    - The OFDM parameters for the first message (which is "Msg0")
 32 12 10 576 288    - The FRAME parameters for the first message (which is "Msg0")
 0 0 0 0 0 0 1 1 ... - The input bits for the first message (last bit ENDs this dictionary entry)
-1 48 24 0 13  	    - The OFDM paramteers for the second message (which is "Msg1")
+1 48 24 0 13  	    - The OFDM parameters for the second message (which is "Msg1")
 32 12 10 576 288    - The FRAME parameters for the second message (which is "Msg1")
 0 0 0 0 0 0 1 1 ... - The input bits for the second message (last bit ENDs this dictionary entry)
 ...
@@ -278,19 +346,30 @@ This file describes the Radar dictionary format, as defined in `radar_dictionary
 The trace dictionary is defined as follows:
 
 ```
-<n>         - Number of dictionary entries
-<id> <dist> - the ID of this entry (sequential number?) and Distance it represents
+<S> <E>     - Number of dictionary Sets (```S```) and Entries per Set (```E```)
+<L>         - The Log2 of the number of samples (```L```) per entry in the set
+<I> <L> <D> - the ID of this entry (```I```), Log2 Samples (```L```) for this entry, ) and Distance (```D```) it represents
 <f>         - These are the input data values (float format)
-<f>         - There are RADAR_N of them (1<<14) per dictionary entry
+<f>         - There are (```1<<L```) or ```2^L``` per dictionary entry in this set
 ...
 <f>
-<id> <dist> - the ID of the next entry, and Distance it represents
+<I> <L> <D> - the ID of this entry (```I```), Log2 Samples (```L```) for this entry, ) and Distance (```D```) it represents
+...
+...
+<f>
+<L>         - The Log2 of the number of samples (```L```) per entry in the next set
+<I> <L> <D> - the ID of this entry (```I```), Log2 Samples (```L```) for this entry, ) and Distance (```D```) it represents
 ...
 ```
 
 ### The CV Dictionary Format
 
 This version of the Mini-ERA does not use or require a CV CNN Dictionary file.  Note that this may change as we move forward, but currently the dictionary functionality is incorporated into the Python CV CNN kernel code.
+
+
+### The H264 Dictionary Format
+
+This version of the Mini-ERA does not use or require an H264 Dictionary file (yet).  There is provision in place to utilize one in the future.
 
 
 ## More Details, Additional Utilities, etc.
@@ -302,8 +381,7 @@ The Mini-ERA applications currently consists of four major components:
  - The Viterbi kernel
  - The Radar kernel
 
-Each kernel is implemented in a separate subdirectory space, consistent with their name/function (e.g. Viterbi is in `viterbi`, etc.). Most of the Mini-ERA is implemented in standard C code using GCC compilation. The CV CNN code, however, is a Keras implementation of a CNN and requires
-the system suport Keras python input, etc.
+Each kernel is implemented in a separate subdirectory space, consistent with their name/function (e.g. Viterbi is in `viterbi`, etc.). Most of the Mini-ERA is implemented in standard C code using GCC compilation. The CV CNN code, however, is a Keras implementation of a CNN and requires the system suport Keras python input, etc.
 
 <img src="/utils/block_diagram.png" width="600">
 
